@@ -1,5 +1,6 @@
 import { Form, useActionData, useNavigation, useLoaderData } from "react-router";
 import { useState } from "react";
+import Button from "~/components/Button";
 
 export async function loader({ params }: { params: { id: string } }) {
   const { db } = await import("../lib/db.server");
@@ -162,7 +163,7 @@ export default function LessonView() {
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                       JLPT {lesson.level}
                     </span>
-                    <button
+                    <Button
                       onClick={() => {
                         if (confirm('Are you sure you want to delete this lesson? This action cannot be undone.')) {
                           // Delete the lesson
@@ -189,13 +190,15 @@ export default function LessonView() {
                           });
                         }
                       }}
-                      className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                      variant="red"
+                      size="sm"
+                      className="inline-flex items-center"
                     >
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <div className="text-sm text-gray-500">
@@ -207,9 +210,7 @@ export default function LessonView() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-6">Story</h2>
                 <div className="prose prose-lg max-w-none">
-                  <div className="text-gray-800 font-japanese leading-relaxed whitespace-pre-wrap">
-                    {lesson.story}
-                  </div>
+                  {lesson.story}
                 </div>
               </div>
 
@@ -239,18 +240,17 @@ export default function LessonView() {
               </div>
 
               {/* Practice Questions */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <div className="bg-white rounded-lg shadow-sm p-6" data-section="questions">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900">Practice Questions</h2>
                   <Form method="post">
                     <input type="hidden" name="action" value="generate-more-questions" />
-                    <button
+                    <Button
                       type="submit"
                       disabled={isGenerating}
-                      className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                       {isGenerating ? "Generating..." : "Generate More Questions"}
-                    </button>
+                    </Button>
                   </Form>
                 </div>
 
@@ -317,18 +317,20 @@ export default function LessonView() {
                       )}
 
                       <div className="flex items-center space-x-4">
-                        <button
+                        <Button
                           onClick={() => checkAnswer(question.id)}
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                          variant="green"
+                          size="sm"
                         >
                           答えをチェック
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => toggleAnswer(question.id)}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                          variant="ghost"
+                          size="sm"
                         >
                           {showAnswers[question.id] ? "答えを隠す" : "答えを見る"}
-                        </button>
+                        </Button>
                       </div>
 
                       {checkResults[question.id] && (
@@ -402,7 +404,19 @@ export default function LessonView() {
             {/* Vocabulary Sidebar */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-6">Vocabulary</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-semibold text-gray-900">Vocabulary</h2>
+                  <Button
+                    variant="green"
+                    size="sm"
+                    className="inline-flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    Study
+                  </Button>
+                </div>
                 <div className="max-h-150 overflow-y-auto space-y-4 pr-2">
                   {lesson.vocabulary.map((vocab, index) => (
                     <div key={vocab.id} className="border rounded-lg p-4">

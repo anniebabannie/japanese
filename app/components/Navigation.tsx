@@ -1,9 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import Button from "./Button";
 
 export default function Navigation() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [actionData, setActionData] = useState<{ success?: boolean; lessonId?: string; error?: string } | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setActionData(null);
+  };
+
+  // Handle Escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isModalOpen) {
+        closeModal();
+      }
+    };
+
+    if (isModalOpen) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isModalOpen]);
+
+  // Handle click outside modal
+  const handleBackdropClick = (event: React.MouseEvent) => {
+    if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      closeModal();
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -68,15 +102,15 @@ export default function Navigation() {
                 My Lessons
               </a>
               
-              <button
+              <Button
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors shadow-sm hover:shadow-md"
+                className="inline-flex items-center shadow-sm hover:shadow-md"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
                 Generate Lesson
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -84,24 +118,29 @@ export default function Navigation() {
 
       {/* Generate Lesson Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={handleBackdropClick}
+        >
+          <div 
+            ref={modalRef}
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold text-gray-900">
                   Generate a New Lesson
                 </h2>
-                <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setActionData(null);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                <Button
+                  onClick={closeModal}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </button>
+                </Button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -138,30 +177,21 @@ export default function Navigation() {
                 </div>
 
                 <div className="flex space-x-3 pt-4">
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setActionData(null);
-                    }}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors"
+                    onClick={closeModal}
+                    variant="gray"
+                    className="flex-1"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
-                    disabled={isGenerating}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                    loading={isGenerating}
+                    className="flex-1"
                   >
-                    {isGenerating ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Generating...
-                      </div>
-                    ) : (
-                      "Generate Lesson"
-                    )}
-                  </button>
+                    Generate Lesson
+                  </Button>
                 </div>
               </form>
 
