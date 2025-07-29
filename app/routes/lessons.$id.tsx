@@ -1,6 +1,7 @@
 import { Form, useActionData, useNavigation, useLoaderData } from "react-router";
 import { useState } from "react";
 import Button from "~/components/Button";
+import Modal from "~/components/Modal";
 
 export async function loader({ params }: { params: { id: string } }) {
   const { db } = await import("../lib/db.server");
@@ -86,6 +87,15 @@ export default function LessonView() {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [checkResults, setCheckResults] = useState<Record<string, { correct: boolean; message: string }>>({});
+  const [isStudyModalOpen, setIsStudyModalOpen] = useState(false);
+  const [flashcardMode, setFlashcardMode] = useState<'reading' | 'meaning'>('reading');
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [completedModes, setCompletedModes] = useState<Set<'reading' | 'meaning'>>(new Set());
+  const [flashcardResults, setFlashcardResults] = useState<Record<string, { correctWords: Set<string>; totalWords: number }>>({
+    reading: { correctWords: new Set(), totalWords: lesson.vocabulary.length },
+    meaning: { correctWords: new Set(), totalWords: lesson.vocabulary.length }
+  });
 
   const toggleAnswer = (questionId: string) => {
     setShowAnswers(prev => ({
@@ -131,6 +141,61 @@ export default function LessonView() {
       [questionId]: { correct: isCorrect, message },
     }));
   };
+
+  // Flashcard functions
+  const handleFlashcardResult = (correct: boolean) => {
+    setFlashcardResults(prev => {
+      const currentMode = prev[flashcardMode];
+      const newCorrectWords = new Set(currentMode.correctWords);
+      
+      if (correct) {
+        newCorrectWords.add(currentCard.word);
+      } else {
+        newCorrectWords.delete(currentCard.word);
+      }
+      
+      return {
+        ...prev,
+        [flashcardMode]: {
+          correctWords: newCorrectWords,
+          totalWords: currentMode.totalWords
+        }
+      };
+    });
+
+    // Move to next card or complete
+    if (currentCardIndex < lesson.vocabulary.length - 1) {
+      setCurrentCardIndex(currentCardIndex + 1);
+      setShowAnswer(false);
+    } else {
+      // Completed all cards for this mode
+      setCompletedModes(prev => new Set([...prev, flashcardMode]));
+    }
+  };
+
+  const resetFlashcards = () => {
+    setCurrentCardIndex(0);
+    setShowAnswer(false);
+    setCompletedModes(new Set());
+    setFlashcardResults({
+      reading: { correctWords: new Set(), totalWords: lesson.vocabulary.length },
+      meaning: { correctWords: new Set(), totalWords: lesson.vocabulary.length }
+    });
+  };
+
+  const tryAgain = () => {
+    setCurrentCardIndex(0);
+    setShowAnswer(false);
+    setCompletedModes(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(flashcardMode);
+      return newSet;
+    });
+  };
+
+  const currentCard = lesson.vocabulary[currentCardIndex];
+  const progress = flashcardResults[flashcardMode];
+  const progressPercentage = progress.totalWords > 0 ? Math.round((progress.correctWords.size / progress.totalWords) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
@@ -210,7 +275,7 @@ export default function LessonView() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-6">Story</h2>
                 <div className="prose prose-lg max-w-none">
-                  {lesson.story}
+                {lesson.story}
                 </div>
               </div>
 
@@ -407,6 +472,7 @@ export default function LessonView() {
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900">Vocabulary</h2>
                   <Button
+                    onClick={() => setIsStudyModalOpen(true)}
                     variant="green"
                     size="sm"
                     className="inline-flex items-center"
@@ -441,6 +507,193 @@ export default function LessonView() {
             </div>
           </div>
         </div>
+
+        {/* Study Modal */}
+        <Modal
+          isOpen={isStudyModalOpen}
+          onClose={() => setIsStudyModalOpen(false)}
+          title="Vocabulary Flashcards"
+          size="lg"
+        >
+          <div className="space-y-6">
+            {/* Tabs */}
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => {
+                    setFlashcardMode('reading');
+                    setCurrentCardIndex(0);
+                    setShowAnswer(false);
+                  }}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    flashcardMode === 'reading'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Reading Practice
+                </button>
+                <button
+                  onClick={() => {
+                    setFlashcardMode('meaning');
+                    setCurrentCardIndex(0);
+                    setShowAnswer(false);
+                  }}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    flashcardMode === 'meaning'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  Meaning Practice
+                </button>
+              </nav>
+            </div>
+
+                        {!completedModes.has(flashcardMode) ? (
+              <>
+                {/* Progress */}
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Card {currentCardIndex + 1} of {lesson.vocabulary.length}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {progress.correctWords.size}/{progress.totalWords} correct ({progressPercentage}%)
+                  </div>
+                </div>
+
+                {/* Flashcard */}
+                {currentCard && (
+                  <div className="bg-white border-2 border-gray-200 rounded-lg p-8 min-h-[300px] flex flex-col items-center justify-center">
+                    <div className="text-center">
+                      {/* Front of card - Kanji */}
+                      <div className="mb-6">
+                        <h3 className="text-4xl font-bold text-gray-900 font-japanese mb-4">
+                          {currentCard.word}
+                        </h3>
+                        <p className="text-lg text-gray-600">
+                          {flashcardMode === 'reading' ? 'What is the reading?' : 'What does this mean?'}
+                        </p>
+                      </div>
+
+                      {/* Back of card - Answer */}
+                      {showAnswer && (
+                        <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                          <p className="text-2xl font-medium text-blue-900 font-japanese mb-2">
+                            {flashcardMode === 'reading' ? currentCard.reading || 'No reading available' : currentCard.meaning}
+                          </p>
+                          {flashcardMode === 'reading' && currentCard.meaning && (
+                            <p className="text-sm text-gray-600">Meaning: {currentCard.meaning}</p>
+                          )}
+                          {flashcardMode === 'meaning' && currentCard.reading && (
+                            <p className="text-sm text-gray-600">Reading: {currentCard.reading}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex space-x-4">
+                        {!showAnswer ? (
+                          <Button
+                            onClick={() => setShowAnswer(true)}
+                            variant="blue"
+                            size="lg"
+                            className="px-8"
+                          >
+                            Show Answer
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              onClick={() => handleFlashcardResult(false)}
+                              variant="red"
+                              size="lg"
+                              className="px-8"
+                            >
+                              Got it Wrong
+                            </Button>
+                            <Button
+                              onClick={() => handleFlashcardResult(true)}
+                              variant="green"
+                              size="lg"
+                              className="px-8"
+                            >
+                              Got it Right
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Reset button */}
+                <div className="text-center">
+                  <Button
+                    onClick={resetFlashcards}
+                    variant="gray"
+                    size="sm"
+                  >
+                    Reset Progress
+                  </Button>
+                </div>
+              </>
+            ) : (
+              /* Completion Screen */
+              <div className="text-center space-y-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Great job!</h3>
+                  <p className="text-gray-600 mb-6">You've completed the {flashcardMode === 'reading' ? 'reading' : 'meaning'} practice.</p>
+                </div>
+
+                {/* Final Results */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <div className="text-4xl font-bold text-green-600 mb-2">{progressPercentage}%</div>
+                  <div className="text-lg text-gray-700 mb-1">
+                    {progress.correctWords.size} out of {progress.totalWords} words correct
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {flashcardMode === 'reading' ? 'Reading' : 'Meaning'} practice
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="bg-gray-200 rounded-full h-3">
+                  <div 
+                    className="bg-green-600 h-3 rounded-full transition-all duration-500" 
+                    style={{ width: `${progressPercentage}%` }}
+                  ></div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-4 justify-center">
+                  <Button
+                    onClick={tryAgain}
+                    variant="blue"
+                    size="lg"
+                    className="px-8"
+                  >
+                    Try Again
+                  </Button>
+                  <Button
+                    onClick={() => setIsStudyModalOpen(false)}
+                    variant="gray"
+                    size="lg"
+                    className="px-8"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
       </div>
   );
 } 
