@@ -162,10 +162,54 @@ export default function LessonView() {
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                       JLPT {lesson.level}
                     </span>
+                    <button
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this lesson? This action cannot be undone.')) {
+                          // Delete the lesson
+                          fetch(`/api/delete-lesson?id=${lesson.id}`, {
+                            method: 'DELETE',
+                          }).then(response => {
+                            console.log('Delete response:', response);
+                            if (response.ok) {
+                              return response.json();
+                            } else {
+                              console.error('Delete failed:', response.status, response.statusText);
+                              alert('Failed to delete lesson');
+                              throw new Error('Delete failed');
+                            }
+                          }).then(data => {
+                            if (data.success) {
+                              window.location.href = '/';
+                            } else {
+                              alert(data.error || 'Failed to delete lesson');
+                            }
+                          }).catch(error => {
+                            console.error('Error deleting lesson:', error);
+                            alert('Failed to delete lesson');
+                          });
+                        }
+                      }}
+                      className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Delete
+                    </button>
                   </div>
                 </div>
                 <div className="text-sm text-gray-500">
                   Created on {new Date(lesson.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+
+              {/* Story/Article */}
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-6">Story</h2>
+                <div className="prose prose-lg max-w-none">
+                  <div className="text-gray-800 font-japanese leading-relaxed whitespace-pre-wrap">
+                    {lesson.story}
+                  </div>
                 </div>
               </div>
 
@@ -359,7 +403,7 @@ export default function LessonView() {
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-6">Vocabulary</h2>
-                <div className="space-y-4">
+                <div className="max-h-150 overflow-y-auto space-y-4 pr-2">
                   {lesson.vocabulary.map((vocab, index) => (
                     <div key={vocab.id} className="border rounded-lg p-4">
                       <div className="flex items-start justify-between">

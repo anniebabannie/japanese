@@ -28,32 +28,53 @@ export interface GeneratedLesson {
   title: string;
   description: string;
   level: 'N4' | 'N3';
+  story: string;
   grammarPoints: GrammarPoint[];
   vocabulary: Vocabulary[];
   questions: Question[];
 }
 
 export async function generateLesson(level: 'N4' | 'N3', topic?: string): Promise<GeneratedLesson> {
-  const prompt = `Generate a comprehensive Japanese lesson for JLPT ${level} level${topic ? ` focusing on ${topic}` : ''}.
+  const prompt = `Generate a comprehensive Japanese lesson for JLPT ${level} level${topic ? ` about ${topic}` : ''}.
 
 The lesson should include:
 
 1. A clear title and description
-2. 3-4 grammar points with explanations and examples
-3. 8-10 vocabulary words with readings and meanings
-4. 5 practice questions (mix of multiple choice, fill-in-blank, and translation)
+2. A story or article (500-600 words) written in Japanese at JLPT ${level} level
+3. 3-4 grammar points that appear in the text, with explanations and examples
+4. 8-10 vocabulary words extracted from the text with readings and meanings
+5. 5 practice questions including reading comprehension questions in Japanese
 
-For grammar points, focus on ${level === 'N4' ? 'basic to intermediate grammar patterns' : 'intermediate to advanced grammar patterns'}.
+For the story/article:
+- Write an engaging, culturally appropriate story or informative article
+- Use vocabulary and grammar appropriate for JLPT ${level} level
+- Make it interesting and relatable for language learners
+- Include natural dialogue and descriptive language
 
-For vocabulary, include common words and phrases that would appear on the JLPT ${level} exam.
+For grammar points:
+- Focus on grammar patterns that actually appear in the text
+- Provide clear explanations of how they work
+- Give examples from the text and additional examples
 
-For questions, make them practical and test understanding of the grammar and vocabulary covered.
+For vocabulary:
+- Extract important words from the text
+- Include readings (hiragana/katakana) and English meanings
+- Focus on words that are useful for JLPT ${level} level
+
+For questions:
+- Include 2-3 reading comprehension questions in Japanese
+- Include 1-2 grammar-focused questions
+- Include 1 vocabulary question
+- Use only these question types: MULTIPLE_CHOICE, FILL_IN_BLANK, TRANSLATION
+- For MULTIPLE_CHOICE questions, always provide exactly 4 options
+- For FILL_IN_BLANK and TRANSLATION questions, use an empty options array []
 
 Return the response as a JSON object with this exact structure:
 {
   "title": "Lesson Title",
   "description": "Brief description of what this lesson covers",
   "level": "${level}",
+  "story": "The Japanese story or article text here",
   "grammarPoints": [
     {
       "point": "Grammar pattern name",
@@ -70,16 +91,30 @@ Return the response as a JSON object with this exact structure:
   ],
   "questions": [
     {
-      "question": "Question text",
+      "question": "Question text (can be in Japanese for reading comprehension)",
       "answer": "Correct answer",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "type": "MULTIPLE_CHOICE",
+      "explanation": "Why this answer is correct"
+    },
+    {
+      "question": "Fill in the blank question",
+      "answer": "Correct answer",
+      "options": [],
+      "type": "FILL_IN_BLANK",
+      "explanation": "Why this answer is correct"
+    },
+    {
+      "question": "Translate this sentence to Japanese",
+      "answer": "Correct Japanese translation",
+      "options": [],
+      "type": "TRANSLATION",
       "explanation": "Why this answer is correct"
     }
   ]
 }
 
-Make sure all Japanese text is properly formatted and the JSON is valid.`;
+Make sure all Japanese text is properly formatted and the JSON is valid. The story should be engaging and the grammar points should naturally appear in the text.`;
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',

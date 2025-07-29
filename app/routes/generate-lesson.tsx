@@ -13,6 +13,7 @@ export async function action({ request }: { request: Request }) {
       data: {
         title: generatedLesson.title,
         description: generatedLesson.description,
+        story: generatedLesson.story,
         level: level as any,
         grammarPoints: {
           create: generatedLesson.grammarPoints.map((gp, index) => ({

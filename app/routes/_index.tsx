@@ -30,12 +30,23 @@ export async function action({ request }: { request: Request }) {
 
     // Generate the lesson
     const generatedLesson = await generateLesson(level, topic || undefined);
+    
+    // Debug logging
+    console.log("Generated lesson:", {
+      title: generatedLesson.title,
+      description: generatedLesson.description,
+      story: generatedLesson.story,
+      grammarPointsCount: generatedLesson.grammarPoints.length,
+      vocabularyCount: generatedLesson.vocabulary.length,
+      questionsCount: generatedLesson.questions.length,
+    });
 
     // Save to database
     const lesson = await db.lesson.create({
       data: {
         title: generatedLesson.title,
         description: generatedLesson.description,
+        story: generatedLesson.story,
         level: level as any,
         grammarPoints: {
           create: generatedLesson.grammarPoints.map((gp, index) => ({
