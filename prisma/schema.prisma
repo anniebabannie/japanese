@@ -40,7 +40,6 @@ model Vocabulary {
   word        String
   reading     String?
   meaning     String
-  example     String?
   order       Int
 }
 

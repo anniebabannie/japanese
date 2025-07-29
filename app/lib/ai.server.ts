@@ -14,7 +14,6 @@ export interface Vocabulary {
   word: string;
   reading?: string;
   meaning: string;
-  example?: string;
 }
 
 export interface Question {
@@ -41,7 +40,7 @@ The lesson should include:
 
 1. A clear title and description
 2. 3-4 grammar points with explanations and examples
-3. 8-10 vocabulary words with readings, meanings, and example sentences
+3. 8-10 vocabulary words with readings and meanings
 4. 5 practice questions (mix of multiple choice, fill-in-blank, and translation)
 
 For grammar points, focus on ${level === 'N4' ? 'basic to intermediate grammar patterns' : 'intermediate to advanced grammar patterns'}.
@@ -66,8 +65,7 @@ Return the response as a JSON object with this exact structure:
     {
       "word": "Japanese word",
       "reading": "Hiragana/katakana reading",
-      "meaning": "English meaning",
-      "example": "Example sentence using this word"
+      "meaning": "English meaning"
     }
   ],
   "questions": [
