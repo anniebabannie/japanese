@@ -1,6 +1,7 @@
 import { Form, useActionData, useNavigation, useLoaderData } from "react-router";
 import { useState, useEffect } from "react";
 import Button from "~/components/Button";
+import Modal from "~/components/Modal";
 
 export async function loader({ params }: { params: { id: string } }) {
   const { db } = await import("../lib/db.server");
@@ -88,6 +89,7 @@ export default function LessonView() {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [checkResults, setCheckResults] = useState<Record<string, { correct: boolean; message: string }>>({});
+  const [isStudyModalOpen, setIsStudyModalOpen] = useState(false);
 
   const toggleAnswer = (questionId: string) => {
     setShowAnswers(prev => ({
@@ -408,8 +410,19 @@ export default function LessonView() {
             {/* Vocabulary Sidebar */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
-                <div className="mb-6">
+                <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900">Vocabulary</h2>
+                  <Button
+                    onClick={() => setIsStudyModalOpen(true)}
+                    variant="green"
+                    size="sm"
+                    className="inline-flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    Study
+                  </Button>
                 </div>
                 <div className="max-h-150 overflow-y-auto space-y-4 pr-2">
                   {lesson.vocabulary.map((vocab, index) => (
@@ -436,6 +449,17 @@ export default function LessonView() {
           </div>
         </div>
 
+        {/* Study Modal */}
+        <Modal
+          isOpen={isStudyModalOpen}
+          onClose={() => setIsStudyModalOpen(false)}
+          title="Study Vocabulary"
+          size="lg"
+        >
+          <div className="space-y-6">
+            <p className="text-gray-600">Study modal content will go here.</p>
+          </div>
+        </Modal>
 
       </div>
   );
