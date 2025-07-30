@@ -2,6 +2,7 @@ import { Form, useActionData, useNavigation, useLoaderData } from "react-router"
 import { useState, useEffect } from "react";
 import Button from "~/components/Button";
 import Modal from "~/components/Modal";
+import StudyModal from "~/components/StudyModal";
 
 export async function loader({ params }: { params: { id: string } }) {
   const { db } = await import("../lib/db.server");
@@ -450,16 +451,11 @@ export default function LessonView() {
         </div>
 
         {/* Study Modal */}
-        <Modal
+        <StudyModal
           isOpen={isStudyModalOpen}
           onClose={() => setIsStudyModalOpen(false)}
-          title="Study Vocabulary"
-          size="lg"
-        >
-          <div className="space-y-6">
-            <p className="text-gray-600">Study modal content will go here.</p>
-          </div>
-        </Modal>
+          lessonId={lesson.id}
+        />
 
       </div>
   );
