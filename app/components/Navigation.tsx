@@ -88,7 +88,7 @@ export default function Navigation() {
                   </svg>
                 </div>
                 <span className="text-xl font-bold text-gray-900">
-                  Japanese Learning <span className="text-blue-600">AI</span>
+                  Jigaku
                 </span>
               </a>
             </div>
