@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Button from "~/components/Button";
 import Modal from "~/components/Modal";
 import StudyModal from "~/components/StudyModal";
+import StoryText from "~/components/StoryText";
 
 export async function loader({ params }: { params: { id: string } }) {
   const { db } = await import("../lib/db.server");
@@ -81,16 +82,23 @@ export async function action({ request, params }: { request: Request; params: { 
 }
 
 export default function LessonView() {
-  const { lesson } = useLoaderData<typeof loader>();
+  const { lesson: initialLesson } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isGenerating = navigation.state === "submitting";
+  
+  // Use state to manage lesson data so we can update it dynamically
+  const [lesson, setLesson] = useState(initialLesson);
 
   const [showAnswers, setShowAnswers] = useState<Record<string, boolean>>({});
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const [checkResults, setCheckResults] = useState<Record<string, { correct: boolean; message: string }>>({});
   const [isStudyModalOpen, setIsStudyModalOpen] = useState(false);
+  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [isLookingUpWord, setIsLookingUpWord] = useState(false);
+  const [highlightedVocabId, setHighlightedVocabId] = useState<string | null>(null);
+  const [highlightedWordInStory, setHighlightedWordInStory] = useState<string | null>(null);
 
   const toggleAnswer = (questionId: string) => {
     setShowAnswers(prev => ({
@@ -135,6 +143,132 @@ export default function LessonView() {
       ...prev,
       [questionId]: { correct: isCorrect, message },
     }));
+  };
+
+  const handleWordSelected = async (word: string) => {
+    setSelectedWord(word);
+    setIsLookingUpWord(true);
+    
+    try {
+      // Look up the word using the LLM
+      const response = await fetch('/api/lookup-word', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ word }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Check if the word already exists in the vocabulary list
+        const existingWord = lesson.vocabulary.find(vocab => 
+          vocab.word === data.word || 
+          vocab.reading === data.reading ||
+          vocab.meaning.toLowerCase().includes(data.meaning.toLowerCase()) ||
+          data.meaning.toLowerCase().includes(vocab.meaning.toLowerCase())
+        );
+        
+        if (existingWord) {
+          const shouldAdd = confirm(
+            `"${data.word}" appears to already be in your vocabulary list.\n\n` +
+            `Existing: ${existingWord.word} (${existingWord.reading || 'no reading'}) - ${existingWord.meaning}\n` +
+            `New: ${data.word} (${data.reading || 'no reading'}) - ${data.meaning}\n\n` +
+            `Do you still want to add it?`
+          );
+          
+          if (!shouldAdd) {
+            setIsLookingUpWord(false);
+            setSelectedWord(null);
+            return;
+          }
+        }
+        
+        // Add the word to the lesson's vocabulary
+        const addResponse = await fetch('/api/add-vocabulary', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            lessonId: lesson.id,
+            word: data.word,
+            reading: data.reading,
+            meaning: data.meaning,
+            originalForm: data.originalForm,
+            conjugationInfo: data.conjugationInfo,
+          }),
+        });
+        
+        if (addResponse.ok) {
+          const addData = await addResponse.json();
+          
+          // Add the new vocabulary to the lesson state (at the top)
+          const updatedLesson = {
+            ...lesson,
+            vocabulary: [addData.vocabulary, ...lesson.vocabulary]
+          };
+          setLesson(updatedLesson);
+          
+          // Highlight the new vocabulary word
+          setHighlightedVocabId(addData.vocabulary.id);
+          
+          // Scroll the vocabulary list to the top
+          setTimeout(() => {
+            const vocabContainer = document.querySelector('[data-section="vocabulary"] .max-h-150') as HTMLElement;
+            if (vocabContainer) {
+              vocabContainer.scrollTop = 0;
+            }
+          }, 100); // Small delay to ensure the DOM is updated
+          
+          // Remove highlight after 3 seconds
+          setTimeout(() => {
+            setHighlightedVocabId(null);
+          }, 3000);
+        } else {
+          alert('Failed to add word to vocabulary');
+        }
+      } else {
+        alert('Failed to look up word');
+      }
+    } catch (error) {
+      console.error('Error looking up word:', error);
+      alert('Error looking up word');
+    } finally {
+      setIsLookingUpWord(false);
+      setSelectedWord(null);
+    }
+  };
+
+  const handleDeleteVocabulary = async (vocabularyId: string) => {
+    if (confirm('Are you sure you want to delete this vocabulary word?')) {
+      try {
+        const response = await fetch(`/api/delete-vocabulary?id=${vocabularyId}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          // Refresh the page to show the updated vocabulary list
+          window.location.reload();
+        } else {
+          alert('Failed to delete vocabulary word');
+        }
+      } catch (error) {
+        console.error('Error deleting vocabulary:', error);
+        alert('Error deleting vocabulary word');
+      }
+    }
+  };
+
+  const handleVocabularyWordClick = (vocab: any) => {
+    // If this word is already highlighted, unhighlight it
+    if (highlightedWordInStory === vocab.word || highlightedWordInStory === vocab.originalForm) {
+      setHighlightedWordInStory(null);
+    } else {
+      // Highlight this word (prioritize originalForm if it exists)
+      setHighlightedWordInStory(vocab.originalForm || vocab.word);
+    }
   };
 
 
@@ -216,9 +350,16 @@ export default function LessonView() {
               {/* Story/Article */}
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-6">Story</h2>
-                <div className="prose prose-lg max-w-none">
-                {lesson.story}
-                </div>
+                {isLookingUpWord && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <p className="text-blue-800">Looking up "{selectedWord}"...</p>
+                  </div>
+                )}
+                <StoryText 
+                  text={lesson.story} 
+                  onWordSelected={handleWordSelected} 
+                  highlightedWord={highlightedWordInStory}
+                />
               </div>
 
               {/* Grammar Points */}
@@ -409,7 +550,7 @@ export default function LessonView() {
             </div>
 
             {/* Vocabulary Sidebar */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1" data-section="vocabulary">
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-8">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900">Vocabulary</h2>
@@ -427,10 +568,24 @@ export default function LessonView() {
                 </div>
                 <div className="max-h-150 overflow-y-auto space-y-4 pr-2">
                   {lesson.vocabulary.map((vocab, index) => (
-                    <div key={vocab.id} className="border rounded-lg p-4">
+                    <div 
+                      key={vocab.id} 
+                      data-vocab-id={vocab.id}
+                      className={`border rounded-lg p-4 hover:bg-gray-50 hover:shadow-sm transition-shadow ${
+                        highlightedVocabId === vocab.id 
+                          ? 'border-green-500 bg-green-50 shadow-lg transition-all duration-500' 
+                          : highlightedWordInStory === (vocab.originalForm || vocab.word)
+                          ? 'border-yellow-500 bg-yellow-50 shadow-lg'
+                          : 'border-gray-200'
+                      }`}
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900 font-japanese">
+                          <h3 
+                            className="text-lg font-medium text-gray-900 font-japanese cursor-pointer hover:text-blue-600 transition-colors"
+                            onClick={() => handleVocabularyWordClick(vocab)}
+                            title="Click to highlight this word in the story"
+                          >
                             {vocab.word}
                           </h3>
                           {vocab.reading && (
@@ -439,8 +594,21 @@ export default function LessonView() {
                             </p>
                           )}
                           <p className="text-gray-700 mt-1">{vocab.meaning}</p>
+                          {vocab.conjugationInfo && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              {vocab.originalForm} → {vocab.conjugationInfo}
+                            </p>
+                          )}
                         </div>
-                        <span className="text-sm text-gray-500">#{index + 1}</span>
+                        <button
+                          onClick={() => handleDeleteVocabulary(vocab.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-1 cursor-pointer"
+                          title="Delete vocabulary word"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   ))}

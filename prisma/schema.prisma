@@ -32,14 +32,16 @@ model GrammarPoint {
 }
 
 model Vocabulary {
-  id         String          @id @default(cuid())
-  lessonId   String
-  word       String
-  reading    String?
-  meaning    String
-  order      Int
-  lesson     Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  srsRecords VocabularySRS[]
+  id              String          @id @default(cuid())
+  lessonId        String
+  word            String
+  reading         String?
+  meaning         String
+  originalForm    String?
+  conjugationInfo String?
+  order           Int
+  lesson          Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  srsRecords      VocabularySRS[]
 }
 
 model Question {
