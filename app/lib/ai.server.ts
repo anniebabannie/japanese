@@ -57,19 +57,21 @@ For grammar points:
 - Focus on grammar patterns that actually appear in the text
 - Provide comprehensive, detailed explanations that include:
   * The exact meaning and usage of the grammar pattern
-  * When and how to use it (context, formality level, etc.)
+  * When and how to use it (context, situations, formality level)
+  * Grammatical structure breakdown (required vs optional parts)
   * Common variations or related forms
-  * What makes it different from similar patterns
-  * Typical mistakes learners make and how to avoid them
-  * The grammatical structure breakdown (what parts are required vs optional)
+  * How it differs from similar patterns
+  * Typical learner mistakes and how to avoid them (be encouraging!)
+  * Politeness levels and register considerations
+  * Any special notes about conjugation or particle usage
 - Give 3-4 examples with English translations: one from the text, plus additional examples showing different contexts
 - Format examples as "Japanese sentence - English translation"
-- Write explanations in a clear, direct tone that gets straight to the point
-- Avoid introductory phrases like "Hello" or "Let's dive into"
-- Use markdown formatting (bold, italics, bullet points) for better readability
+- Write in a clear, direct tone that gets straight to the point - no introductory phrases like "Hello" or "Let's dive into"
+- Use markdown formatting for better readability (bold, italics, bullet points)
 - Make explanations specific and actionable, not vague generalizations
 - Include information about politeness levels, formality, and register when relevant
 - Make it feel like a helpful tutor explaining things clearly and directly
+- IMPORTANT: Ensure all JSON is properly escaped. Use \\n for line breaks and escape any quotes within the explanation text
 
 For vocabulary:
 - Extract important words from the text
@@ -96,8 +98,8 @@ Return the response as a JSON object with this exact structure:
   "grammarPoints": [
     {
       "point": "Grammar pattern name",
-      "explanation": "Clear explanation of how to use this grammar",
-      "examples": ["Example sentence 1", "Example sentence 2", "Example sentence 3"]
+      "explanation": "**Pattern name** is used to express... (detailed explanation with markdown formatting and proper JSON escaping)",
+      "examples": ["Japanese sentence - English translation", "Japanese sentence - English translation", "Japanese sentence - English translation"]
     }
   ],
   "vocabulary": [
