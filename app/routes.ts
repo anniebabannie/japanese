@@ -14,6 +14,7 @@ export default [
     route("api/lookup-word", "./routes/api.lookup-word.tsx"),
     route("api/add-vocabulary", "./routes/api.add-vocabulary.tsx"),
     route("api/delete-vocabulary", "./routes/api.delete-vocabulary.tsx"),
+    route("api/regenerate-grammar", "./routes/api.regenerate-grammar.tsx"),
     route("api/srs-review", "./routes/api.srs-review.tsx"),
     route("api/srs-progress", "./routes/api.srs-progress.tsx"),
     route("test-srs", "./routes/test-srs.tsx"),

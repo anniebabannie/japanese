@@ -1,5 +1,6 @@
 import { Form, useActionData, useNavigation, useLoaderData } from "react-router";
 import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import Button from "~/components/Button";
 import Modal from "~/components/Modal";
 import StudyModal from "~/components/StudyModal";
@@ -33,23 +34,42 @@ export async function action({ request, params }: { request: Request; params: { 
       const { db } = await import("../lib/db.server");
       const { generateAdditionalQuestions } = await import("../lib/ai.server");
 
-      // Get existing questions
-      const existingQuestions = await db.question.findMany({
-        where: { lessonId: params.id },
-        orderBy: { order: 'asc' },
+      // Get the lesson data first
+      const lesson = await db.lesson.findUnique({
+        where: { id: params.id },
+        include: {
+          grammarPoints: { orderBy: { order: 'asc' } },
+          vocabulary: { orderBy: { order: 'asc' } },
+        },
       });
 
-      // Generate additional questions
+      if (!lesson) {
+        return { success: false, error: "Lesson not found" };
+      }
+
+      // Delete all existing questions for this lesson
+      await db.question.deleteMany({
+        where: { lessonId: params.id },
+      });
+
+      // Transform vocabulary to match the interface
+      const vocabularyForAI = lesson.vocabulary.map(v => ({
+        word: v.word,
+        reading: v.reading || undefined,
+        meaning: v.meaning,
+      }));
+
+      // Generate completely new questions
       const newQuestions = await generateAdditionalQuestions(
         params.id,
-        existingQuestions.map(q => ({
-          question: q.question,
-          answer: q.answer,
-          options: q.options,
-          type: q.type as any,
-          explanation: q.explanation || undefined,
-        })),
-        3
+        [], // Empty array since we're starting fresh
+        {
+          story: lesson.story,
+          grammarPoints: lesson.grammarPoints,
+          vocabulary: vocabularyForAI,
+          level: lesson.level,
+        },
+        5 // Generate 5 new questions
       );
 
       // Save new questions
@@ -63,16 +83,26 @@ export async function action({ request, params }: { request: Request; params: { 
               options: q.options,
               type: q.type as any,
               explanation: q.explanation,
-              order: existingQuestions.length + index,
+              order: index,
             },
           })
         )
       );
 
-      return { success: true, questions: savedQuestions };
+      // Get the updated lesson with new questions
+      const updatedLesson = await db.lesson.findUnique({
+        where: { id: params.id },
+        include: {
+          grammarPoints: { orderBy: { order: 'asc' } },
+          vocabulary: { orderBy: { order: 'asc' } },
+          questions: { orderBy: { order: 'asc' } },
+        },
+      });
+
+      return { success: true, questions: savedQuestions, updatedLesson };
     } catch (error) {
-      console.error("Error generating additional questions:", error);
-      return { success: false, error: "Failed to generate additional questions" };
+      console.error("Error generating new questions:", error);
+      return { success: false, error: "Failed to generate new questions" };
     }
   }
 
@@ -90,6 +120,18 @@ export default function LessonView() {
   // Use state to manage lesson data so we can update it dynamically
   const [lesson, setLesson] = useState(initialLesson);
 
+  // Update lesson data when new questions are generated
+  useEffect(() => {
+    if (actionData?.success && actionData?.updatedLesson) {
+      setLesson(actionData.updatedLesson);
+      // Clear user answers and results since question IDs have changed
+      setUserAnswers({});
+      setSelectedOptions({});
+      setCheckResults({});
+      setShowAnswers({});
+    }
+  }, [actionData]);
+
   const [showAnswers, setShowAnswers] = useState<Record<string, boolean>>({});
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -99,11 +141,19 @@ export default function LessonView() {
   const [isLookingUpWord, setIsLookingUpWord] = useState(false);
   const [highlightedVocabId, setHighlightedVocabId] = useState<string | null>(null);
   const [highlightedWordInStory, setHighlightedWordInStory] = useState<string | null>(null);
+  const [expandedGrammarPoints, setExpandedGrammarPoints] = useState<Record<string, boolean>>({});
 
   const toggleAnswer = (questionId: string) => {
     setShowAnswers(prev => ({
       ...prev,
       [questionId]: !prev[questionId],
+    }));
+  };
+
+  const toggleGrammarExplanation = (grammarPointId: string) => {
+    setExpandedGrammarPoints(prev => ({
+      ...prev,
+      [grammarPointId]: !prev[grammarPointId],
     }));
   };
 
@@ -262,12 +312,14 @@ export default function LessonView() {
   };
 
   const handleVocabularyWordClick = (vocab: any) => {
+    const wordToHighlight = vocab.originalForm || vocab.word;
+    
     // If this word is already highlighted, unhighlight it
-    if (highlightedWordInStory === vocab.word || highlightedWordInStory === vocab.originalForm) {
+    if (highlightedWordInStory === wordToHighlight) {
       setHighlightedWordInStory(null);
     } else {
-      // Highlight this word (prioritize originalForm if it exists)
-      setHighlightedWordInStory(vocab.originalForm || vocab.word);
+      // Highlight this word
+      setHighlightedWordInStory(wordToHighlight);
     }
   };
 
@@ -295,52 +347,52 @@ export default function LessonView() {
             <div className="lg:col-span-2 space-y-8">
               {/* Header */}
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
+                <div className="mb-4">
+                  <div className="flex items-center space-x-4 mb-2">
                     <h1 className="text-3xl font-bold text-gray-900">{lesson.title}</h1>
-                    <p className="text-gray-600 mt-2">{lesson.description}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                       JLPT {lesson.level}
                     </span>
-                    <Button
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete this lesson? This action cannot be undone.')) {
-                          // Delete the lesson
-                          fetch(`/api/delete-lesson?id=${lesson.id}`, {
-                            method: 'DELETE',
-                          }).then(response => {
-                            console.log('Delete response:', response);
-                            if (response.ok) {
-                              return response.json();
-                            } else {
-                              console.error('Delete failed:', response.status, response.statusText);
-                              alert('Failed to delete lesson');
-                              throw new Error('Delete failed');
-                            }
-                          }).then(data => {
-                            if (data.success) {
-                              window.location.href = '/';
-                            } else {
-                              alert(data.error || 'Failed to delete lesson');
-                            }
-                          }).catch(error => {
-                            console.error('Error deleting lesson:', error);
-                            alert('Failed to delete lesson');
-                          });
-                        }
-                      }}
-                      variant="red"
-                      size="sm"
-                      className="inline-flex items-center"
-                    >
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete
-                    </Button>
                   </div>
+                  <p className="text-gray-600">{lesson.description}</p>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete this lesson? This action cannot be undone.')) {
+                        // Delete the lesson
+                        fetch(`/api/delete-lesson?id=${lesson.id}`, {
+                          method: 'DELETE',
+                        }).then(response => {
+                          console.log('Delete response:', response);
+                          if (response.ok) {
+                            return response.json();
+                          } else {
+                            console.error('Delete failed:', response.status, response.statusText);
+                            alert('Failed to delete lesson');
+                            throw new Error('Delete failed');
+                          }
+                        }).then(data => {
+                          if (data.success) {
+                            window.location.href = '/';
+                          } else {
+                            alert(data.error || 'Failed to delete lesson');
+                          }
+                        }).catch(error => {
+                          console.error('Error deleting lesson:', error);
+                          alert('Failed to delete lesson');
+                        });
+                      }
+                    }}
+                    variant="red"
+                    size="sm"
+                    className="inline-flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </Button>
                 </div>
                 <div className="text-sm text-gray-500">
                   Created on {new Date(lesson.createdAt).toLocaleDateString()}
@@ -364,24 +416,86 @@ export default function LessonView() {
 
               {/* Grammar Points */}
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-2xl font-semibold text-gray-900 mb-6">Grammar Points</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-semibold text-gray-900">Grammar Points</h2>
+                  <Button
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to regenerate the grammar points? This will replace all existing grammar explanations with more detailed ones.')) {
+                        try {
+                          const response = await fetch('/api/regenerate-grammar', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ lessonId: lesson.id }),
+                          });
+                          
+                          if (response.ok) {
+                            const data = await response.json();
+                            if (data.success) {
+                              // Update the lesson state with new grammar points
+                              const updatedLesson = {
+                                ...lesson,
+                                grammarPoints: data.grammarPoints
+                              };
+                              setLesson(updatedLesson);
+                              alert('Grammar points regenerated successfully!');
+                            } else {
+                              alert(data.error || 'Failed to regenerate grammar points');
+                            }
+                          } else {
+                            alert('Failed to regenerate grammar points');
+                          }
+                        } catch (error) {
+                          console.error('Error regenerating grammar points:', error);
+                          alert('Error regenerating grammar points');
+                        }
+                      }
+                    }}
+                    variant="blue"
+                    size="sm"
+                    className="inline-flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Regenerate
+                  </Button>
+                </div>
                 <div className="space-y-6">
                   {lesson.grammarPoints.map((grammarPoint, index) => (
                     <div key={grammarPoint.id} className="border-l-4 border-blue-500 pl-4">
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        {index + 1}. {grammarPoint.point}
-                      </h3>
-                      <p className="text-gray-700 mb-3">{grammarPoint.explanation}</p>
-                      <div className="bg-gray-50 rounded-md p-4">
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">Examples:</h4>
-                        <ul className="space-y-2">
-                          {grammarPoint.examples.map((example, i) => (
-                            <li key={i} className="text-gray-700 font-japanese">
-                              {example}
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {index + 1}. {grammarPoint.point}
+                        </h3>
+                        <Button
+                          onClick={() => toggleGrammarExplanation(grammarPoint.id)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          {expandedGrammarPoints[grammarPoint.id] ? "Hide Explanation" : "Show Explanation"}
+                        </Button>
                       </div>
+                      
+                      {expandedGrammarPoints[grammarPoint.id] && (
+                        <>
+                          <div className="text-gray-700 mb-3 prose prose-sm max-w-none [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>h1]:mb-3 [&>h2]:mb-3 [&>h3]:mb-3 [&>h4]:mb-3 [&>h5]:mb-3 [&>h6]:mb-3">
+                            <ReactMarkdown>{grammarPoint.explanation}</ReactMarkdown>
+                          </div>
+                          <div className="bg-gray-50 rounded-md p-4">
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">Examples:</h4>
+                            <ul className="space-y-2">
+                              {grammarPoint.examples.map((example, i) => (
+                                <li key={i} className="text-gray-700 font-japanese">
+                                  {example}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -397,7 +511,7 @@ export default function LessonView() {
                       type="submit"
                       disabled={isGenerating}
                     >
-                      {isGenerating ? "Generating..." : "Generate More Questions"}
+                      {isGenerating ? "Generating..." : "Generate New Questions"}
                     </Button>
                   </Form>
                 </div>
@@ -517,10 +631,10 @@ export default function LessonView() {
                       </div>
                       <div className="ml-3">
                         <h3 className="text-sm font-medium text-green-800">
-                          Additional Questions Generated!
+                          New Questions Generated!
                         </h3>
                         <div className="mt-2 text-sm text-green-700">
-                          <p>3 new practice questions have been added to this lesson.</p>
+                          <p>5 new practice questions have been generated for this lesson.</p>
                         </div>
                       </div>
                     </div>
