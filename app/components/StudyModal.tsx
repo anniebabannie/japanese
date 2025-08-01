@@ -48,6 +48,12 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
   const [originalItems, setOriginalItems] = useState<SRSRecord[]>([]);
   const [sessionCompleted, setSessionCompleted] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
+  
+  // Separate progress for each study mode
+  const [readingIndex, setReadingIndex] = useState(0);
+  const [meaningIndex, setMeaningIndex] = useState(0);
+  const [readingShowAnswer, setReadingShowAnswer] = useState(false);
+  const [meaningShowAnswer, setMeaningShowAnswer] = useState(false);
 
   // Load due items when modal opens
   useEffect(() => {
@@ -58,6 +64,10 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
       setIsCompleted(false);
       setSessionCompleted(false);
       setSessionStarted(false);
+      setReadingIndex(0);
+      setMeaningIndex(0);
+      setReadingShowAnswer(false);
+      setMeaningShowAnswer(false);
     }
   }, [isOpen, lessonId]);
 
@@ -133,14 +143,18 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
     setIsCompleted(false);
     setSessionCompleted(false);
     setSessionStarted(false);
+    setReadingIndex(0);
+    setMeaningIndex(0);
+    setReadingShowAnswer(false);
+    setMeaningShowAnswer(false);
   };
 
   const handleQualityRating = async (quality: number) => {
-    if (currentIndex >= dueItems.length) return;
+    if (currentModeIndex >= dueItems.length) return;
 
     setIsSubmitting(true);
     try {
-      const currentItem = dueItems[currentIndex];
+      const currentItem = dueItems[currentModeIndex];
       const formData = new FormData();
       formData.append("vocabularyId", currentItem.vocabularyId);
       
@@ -165,9 +179,15 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
       
               if (result.success) {
           // Move to next item or check if session is complete
-          if (currentIndex + 1 < dueItems.length) {
-            setCurrentIndex(currentIndex + 1);
-            setShowAnswer(false);
+          if (currentModeIndex + 1 < dueItems.length) {
+            // Update the appropriate index based on study mode
+            if (studyMode === 'reading') {
+              setReadingIndex(readingIndex + 1);
+              setReadingShowAnswer(false);
+            } else {
+              setMeaningIndex(meaningIndex + 1);
+              setMeaningShowAnswer(false);
+            }
             setQualityRating(null);
           } else {
             // Check if this was the final round (all items rated Good or Easy)
@@ -189,22 +209,29 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
     }
   };
 
-  const currentItem = dueItems[currentIndex];
-  const isLastItem = currentIndex === dueItems.length - 1;
+  // Get the current index and showAnswer state based on study mode
+  const currentModeIndex = studyMode === 'reading' ? readingIndex : meaningIndex;
+  const currentShowAnswer = studyMode === 'reading' ? readingShowAnswer : meaningShowAnswer;
+  const currentItem = dueItems[currentModeIndex];
+  const isLastItem = currentModeIndex === dueItems.length - 1;
   // Progress advances when user has rated the current card (showAnswer is true)
-  const progress = dueItems.length > 0 ? ((currentIndex + (showAnswer ? 1 : 0)) / dueItems.length) * 100 : 0;
+  const progress = dueItems.length > 0 ? ((currentModeIndex + (currentShowAnswer ? 1 : 0)) / dueItems.length) * 100 : 0;
 
   // Handle keyboard events
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (!isOpen || !currentItem) return;
       
-      if (event.key === 'Enter' && !showAnswer) {
-        setShowAnswer(true);
+      if (event.key === 'Enter' && !currentShowAnswer) {
+        if (studyMode === 'reading') {
+          setReadingShowAnswer(true);
+        } else {
+          setMeaningShowAnswer(true);
+        }
       }
       
       // Handle number keys for rating when answer is shown
-      if (showAnswer && !isSubmitting) {
+      if (currentShowAnswer && !isSubmitting) {
         const rating = parseInt(event.key);
         if (rating >= 0 && rating <= 3) {
           handleQualityRating(rating);
@@ -216,7 +243,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
     return () => {
       document.removeEventListener('keydown', handleKeyPress);
     };
-  }, [isOpen, currentItem, showAnswer, isSubmitting]);
+  }, [isOpen, currentItem, currentShowAnswer, isSubmitting, studyMode]);
 
   if (!isOpen) return null;
 
@@ -299,7 +326,6 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
         ) : currentItem ? (
           <div className="space-y-6 flex-1 flex flex-col">
 
-
             {/* Study Mode Tabs */}
             <div className="flex border-b border-gray-200">
               <button
@@ -328,7 +354,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
             <div className="bg-white border-2 border-gray-200 rounded-lg p-6 text-center flex-1 flex flex-col justify-center min-h-[300px]">
               <div className="mb-4">
                 <span className="text-sm text-gray-500">
-                  {currentIndex + 1} of {dueItems.length}
+                  {currentModeIndex + 1} of {dueItems.length}
                 </span>
               </div>
               
@@ -338,16 +364,16 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
                   <h2 className="text-3xl font-bold text-gray-900 mb-2 font-japanese">
                     {currentItem.vocabulary.word}
                   </h2>
-                  {showAnswer && currentItem.vocabulary.reading && (
+                  {currentShowAnswer && currentItem.vocabulary.reading && (
                     <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                       <p className="text-lg font-medium text-gray-900 font-japanese">
                         {currentItem.vocabulary.reading}
                       </p>
                     </div>
                   )}
-                  {!showAnswer && (
+                  {!currentShowAnswer && (
                     <Button
-                      onClick={() => setShowAnswer(true)}
+                      onClick={() => studyMode === 'reading' ? setReadingShowAnswer(true) : setMeaningShowAnswer(true)}
                       variant="blue"
                       className="mt-4 mx-auto"
                     >
@@ -366,16 +392,16 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
                       {currentItem.vocabulary.reading}
                     </p>
                   )}
-                  {showAnswer && (
+                  {currentShowAnswer && (
                     <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                       <p className="text-lg font-medium text-gray-900">
                         {currentItem.vocabulary.meaning}
                       </p>
                     </div>
                   )}
-                  {!showAnswer && (
+                  {!currentShowAnswer && (
                     <Button
-                      onClick={() => setShowAnswer(true)}
+                      onClick={() => setMeaningShowAnswer(true)}
                       variant="blue"
                       className="mt-4 mx-auto"
                     >
@@ -387,7 +413,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
             </div>
 
             {/* Quality Rating Buttons - Only show after answer is revealed */}
-            {showAnswer && (
+            {currentShowAnswer && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 text-center">
                   How well did you know the {studyMode}?
