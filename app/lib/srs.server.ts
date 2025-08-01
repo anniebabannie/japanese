@@ -8,14 +8,18 @@ export function sm2Algorithm(
   quality: number
 ): { repetition: number; easiness: number; interval: number; nextReview: Date } {
   
+  // Convert 0-3 scale to 0-5 scale for SM-2 algorithm
+  // 0 -> 0, 1 -> 2, 2 -> 4, 3 -> 5
+  const convertedQuality = quality === 0 ? 0 : quality === 1 ? 2 : quality === 2 ? 4 : 5;
+  
   // Calculate new easiness factor
-  const newEasiness = easiness + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  const newEasiness = easiness + (0.1 - (5 - convertedQuality) * (0.08 + (5 - convertedQuality) * 0.02));
   const finalEasiness = Math.max(1.3, newEasiness); // Minimum 1.3
   
   let newRepetition: number;
   let newInterval: number;
   
-  if (quality < 3) {
+  if (convertedQuality < 3) {
     // Reset to beginning
     newRepetition = 0;
     newInterval = 0;
@@ -74,23 +78,29 @@ export async function getOrCreateSRSRecord(
 export async function updateSRSRecord(
   userId: string,
   vocabularyId: string,
-  quality: number,
+  readingQuality: number,
+  meaningQuality: number,
   lessonId?: string
 ) {
   const srsRecord = await getOrCreateSRSRecord(userId, vocabularyId, lessonId || "");
+  
+  // Use the lower quality rating to determine the overall SRS progression
+  // This ensures both skills are mastered before moving to longer intervals
+  const overallQuality = Math.min(readingQuality, meaningQuality);
   
   const newData = sm2Algorithm(
     srsRecord.repetition,
     srsRecord.easiness,
     srsRecord.interval,
-    quality
+    overallQuality
   );
 
   return await db.vocabularySRS.update({
     where: { id: srsRecord.id },
     data: {
       ...newData,
-      quality,
+      readingQuality,
+      meaningQuality,
       totalReviews: srsRecord.totalReviews + 1,
       lastReviewed: new Date()
     },
@@ -115,6 +125,27 @@ export async function getDueItems(userId: string, lessonId?: string) {
   });
 }
 
+export async function getAllLessonVocabulary(userId: string, lessonId: string) {
+  // Get all vocabulary for the lesson
+  const lesson = await db.lesson.findUnique({
+    where: { id: lessonId },
+    include: { vocabulary: true }
+  });
+
+  if (!lesson) {
+    throw new Error("Lesson not found");
+  }
+
+  // Get or create SRS records for all vocabulary
+  const srsRecords = [];
+  for (const vocab of lesson.vocabulary) {
+    const srsRecord = await getOrCreateSRSRecord(userId, vocab.id, lessonId);
+    srsRecords.push(srsRecord);
+  }
+
+  return srsRecords;
+}
+
 export async function getSRSStats(userId: string, lessonId?: string) {
   const whereClause: any = { userId };
   if (lessonId) {
@@ -131,13 +162,23 @@ export async function getSRSStats(userId: string, lessonId?: string) {
     ? records.reduce((sum: number, r: any) => sum + r.easiness, 0) / totalItems 
     : 0;
 
+  // Calculate average quality for both reading and meaning
+  const readingRecords = records.filter((r: any) => r.readingQuality !== null);
+  const meaningRecords = records.filter((r: any) => r.meaningQuality !== null);
+  
+  const averageReadingQuality = readingRecords.length > 0 
+    ? readingRecords.reduce((sum: number, r: any) => sum + (r.readingQuality || 0), 0) / readingRecords.length
+    : 0;
+    
+  const averageMeaningQuality = meaningRecords.length > 0 
+    ? meaningRecords.reduce((sum: number, r: any) => sum + (r.meaningQuality || 0), 0) / meaningRecords.length
+    : 0;
+
   return {
     totalItems,
     dueItems,
     averageEasiness,
-    averageQuality: totalItems > 0 
-      ? records.filter((r: any) => r.quality !== null)
-          .reduce((sum: number, r: any) => sum + (r.quality || 0), 0) / records.filter((r: any) => r.quality !== null).length
-      : 0
+    averageReadingQuality,
+    averageMeaningQuality
   };
 } 

@@ -65,7 +65,8 @@ model VocabularySRS {
   easiness     Float      @default(2.5)
   interval     Int        @default(0)
   nextReview   DateTime   @default(now())
-  quality      Int?
+  readingQuality Int?     // Quality rating for reading skill (0-3)
+  meaningQuality Int?     // Quality rating for meaning skill (0-3)
   totalReviews Int        @default(0)
   lastReviewed DateTime?
   createdAt    DateTime   @default(now())

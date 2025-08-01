@@ -1,13 +1,21 @@
-import { getDueItems, getSRSStats } from "../lib/srs.server";
+import { getDueItems, getSRSStats, getAllLessonVocabulary } from "../lib/srs.server";
 
 export async function action({ request }: { request: Request }) {
   try {
     const formData = await request.formData();
     const userId = formData.get("userId") as string || "default-user";
     const lessonId = formData.get("lessonId") as string;
+    const includeAll = formData.get("includeAll") === "true";
 
-    // Get due items for review
-    const dueItems = await getDueItems(userId, lessonId);
+    let dueItems;
+    
+    if (includeAll && lessonId) {
+      // Get all vocabulary for the lesson (for new users)
+      dueItems = await getAllLessonVocabulary(userId, lessonId);
+    } else {
+      // Get only due items (for existing users)
+      dueItems = await getDueItems(userId, lessonId);
+    }
     
     // Get SRS statistics
     const stats = await getSRSStats(userId, lessonId);

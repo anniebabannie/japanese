@@ -4,22 +4,24 @@ export async function action({ request }: { request: Request }) {
   try {
     const formData = await request.formData();
     const vocabularyId = formData.get("vocabularyId") as string;
-    const quality = parseInt(formData.get("quality") as string);
+    const readingQuality = parseInt(formData.get("readingQuality") as string);
+    const meaningQuality = parseInt(formData.get("meaningQuality") as string);
     const lessonId = formData.get("lessonId") as string;
     const userId = formData.get("userId") as string || "default-user"; // For now, use a default user
 
-    if (!vocabularyId || isNaN(quality) || quality < 0 || quality > 5) {
+    if (!vocabularyId || isNaN(readingQuality) || readingQuality < 0 || readingQuality > 3 ||
+        isNaN(meaningQuality) || meaningQuality < 0 || meaningQuality > 3) {
       return new Response(JSON.stringify({ 
         success: false, 
-        error: "Invalid vocabularyId or quality rating" 
+        error: "Invalid vocabularyId or quality ratings (must be 0-3)" 
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // Update SRS record with the quality rating
-    const updatedRecord = await updateSRSRecord(userId, vocabularyId, quality, lessonId);
+    // Update SRS record with both reading and meaning quality ratings
+    const updatedRecord = await updateSRSRecord(userId, vocabularyId, readingQuality, meaningQuality, lessonId);
 
     return new Response(JSON.stringify({
       success: true,
@@ -29,8 +31,9 @@ export async function action({ request }: { request: Request }) {
         easiness: updatedRecord.easiness,
         interval: updatedRecord.interval,
         nextReview: updatedRecord.nextReview,
-        quality: updatedRecord.quality,
-        needsReReview: quality < 4 // Items scoring < 4 need same-day re-review
+        readingQuality: updatedRecord.readingQuality,
+        meaningQuality: updatedRecord.meaningQuality,
+        needsReReview: Math.min(readingQuality, meaningQuality) < 2 // Items scoring < 2 need same-day re-review
       }
     }), {
       status: 200,
