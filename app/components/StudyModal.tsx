@@ -53,6 +53,11 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
   useEffect(() => {
     if (isOpen) {
       loadDueItems();
+    } else {
+      // Reset completion states when modal closes
+      setIsCompleted(false);
+      setSessionCompleted(false);
+      setSessionStarted(false);
     }
   }, [isOpen, lessonId]);
 
@@ -189,6 +194,30 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
   // Progress advances when user has rated the current card (showAnswer is true)
   const progress = dueItems.length > 0 ? ((currentIndex + (showAnswer ? 1 : 0)) / dueItems.length) * 100 : 0;
 
+  // Handle keyboard events
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (!isOpen || !currentItem) return;
+      
+      if (event.key === 'Enter' && !showAnswer) {
+        setShowAnswer(true);
+      }
+      
+      // Handle number keys for rating when answer is shown
+      if (showAnswer && !isSubmitting) {
+        const rating = parseInt(event.key);
+        if (rating >= 0 && rating <= 3) {
+          handleQualityRating(rating);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [isOpen, currentItem, showAnswer, isSubmitting]);
+
   if (!isOpen) return null;
 
   return (
@@ -251,18 +280,16 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
               <div className="text-6xl mb-4">🎉</div>
               <h3 className="text-2xl font-semibold text-gray-900 mb-2">Congratulations!</h3>
               <p className="text-gray-600 mb-6">You've mastered all {originalItems.length} vocabulary items for {studyMode}!</p>
-              <div className="space-y-3">
+              <div className="flex items-center justify-center space-x-4">
                 <Button
                   onClick={restartStudy}
                   variant="blue"
-                  className="w-full"
                 >
                   Review Again
                 </Button>
                 <Button
                   onClick={onClose}
                   variant="ghost"
-                  className="w-full"
                 >
                   Close
                 </Button>
