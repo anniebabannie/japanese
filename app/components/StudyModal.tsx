@@ -56,7 +56,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
     }
   }, [isOpen, lessonId]);
 
-  const loadDueItems = async () => {
+  const loadDueItems = async (isSessionActive = false) => {
     setIsLoading(true);
     try {
       const formData = new FormData();
@@ -95,7 +95,15 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
           
           // Check if we've completed the session (no more items to review)
           // Only show completion if we had original items and now have none due
-          if (result.dueItems.length === 0 && sessionStarted) {
+          console.log('loadDueItems check:', { 
+            dueItemsLength: result.dueItems.length, 
+            sessionStarted, 
+            isSessionActive,
+            originalItemsLength: originalItems.length 
+          });
+          
+          if (result.dueItems.length === 0 && (sessionStarted || isSessionActive)) {
+            console.log('Setting completion to true');
             setIsCompleted(true);
             setSessionCompleted(true);
           } else {
@@ -160,7 +168,9 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
             // Check if this was the final round (all items rated Good or Easy)
             // We're done when we finish a round and there are no more items to re-review
             // The server will return only items that need re-review (rated 0 or 1)
-            await loadDueItems(); // Refresh to get updated stats
+            console.log('Finishing round, calling loadDueItems with session active');
+            setSessionStarted(true); // Ensure session is marked as started
+            await loadDueItems(true); // Pass true to indicate session is active
             // If loadDueItems returns no items, it means all items were rated Good or Easy
             // We'll check this in the next render cycle
           }
@@ -211,25 +221,52 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
             <p className="text-gray-600">This lesson doesn't have any vocabulary to study. Please try refreshing the page.</p>
           </div>
         ) : (isCompleted && sessionCompleted) ? (
-          <div className="text-center py-8 flex-1 flex flex-col justify-center">
-            <div className="text-6xl mb-4">🎉</div>
-            <h3 className="text-2xl font-semibold text-gray-900 mb-2">Congratulations!</h3>
-            <p className="text-gray-600 mb-6">You've mastered all {originalItems.length} vocabulary items for {studyMode}!</p>
-            <div className="space-y-3">
-              <Button
-                onClick={restartStudy}
-                variant="blue"
-                className="w-full"
+          <div className="space-y-6 flex-1 flex flex-col">
+            {/* Study Mode Tabs */}
+            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+              <button
+                onClick={() => setStudyMode('reading')}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  studyMode === 'reading'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                Review Again
-              </Button>
-              <Button
-                onClick={onClose}
-                variant="ghost"
-                className="w-full"
+                Reading
+              </button>
+              <button
+                onClick={() => setStudyMode('meaning')}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                  studyMode === 'meaning'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
-                Close
-              </Button>
+                Meaning
+              </button>
+            </div>
+
+            {/* Completion Content */}
+            <div className="text-center py-8 flex-1 flex flex-col justify-center">
+              <div className="text-6xl mb-4">🎉</div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-2">Congratulations!</h3>
+              <p className="text-gray-600 mb-6">You've mastered all {originalItems.length} vocabulary items for {studyMode}!</p>
+              <div className="space-y-3">
+                <Button
+                  onClick={restartStudy}
+                  variant="blue"
+                  className="w-full"
+                >
+                  Review Again
+                </Button>
+                <Button
+                  onClick={onClose}
+                  variant="ghost"
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         ) : currentItem ? (
