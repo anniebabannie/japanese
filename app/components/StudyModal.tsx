@@ -391,16 +391,11 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
                   )}
                 </>
               ) : (
-                // Meaning mode: show word and reading, test meaning
+                // Meaning mode: show only word, test meaning (hide reading)
                 <>
                   <h2 className="text-3xl font-bold text-gray-900 mb-2 font-japanese">
                     {currentItem.vocabulary.word}
                   </h2>
-                  {currentItem.vocabulary.reading && (
-                    <p className="text-lg text-gray-600 mb-4 font-japanese">
-                      {currentItem.vocabulary.reading}
-                    </p>
-                  )}
                   {currentShowAnswer && (
                     <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                       <p className="text-lg font-medium text-gray-900">

@@ -17,6 +17,7 @@ export default [
     route("api/regenerate-grammar", "./routes/api.regenerate-grammar.tsx"),
     route("api/srs-review", "./routes/api.srs-review.tsx"),
     route("api/srs-progress", "./routes/api.srs-progress.tsx"),
+    route("api/vocabulary-stats", "./routes/api.vocabulary-stats.tsx"),
     route("test-srs", "./routes/test-srs.tsx"),
     route("test-api", "./routes/test-api.tsx"),
     route("test-study", "./routes/test-study.tsx"),
