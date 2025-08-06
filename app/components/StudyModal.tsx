@@ -36,40 +36,48 @@ interface StudyModalProps {
 }
 
 export default function StudyModal({ isOpen, onClose, lessonId, userId = "default-user" }: StudyModalProps) {
-  const [dueItems, setDueItems] = useState<SRSRecord[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
   const [stats, setStats] = useState<SRSStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [studyMode, setStudyMode] = useState<'reading' | 'meaning'>('reading');
   const [qualityRating, setQualityRating] = useState<number | null>(null);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [originalItems, setOriginalItems] = useState<SRSRecord[]>([]);
-  const [sessionCompleted, setSessionCompleted] = useState(false);
+  const [allDueItems, setAllDueItems] = useState<SRSRecord[]>([]);
   const [sessionStarted, setSessionStarted] = useState(false);
   
-  // Separate progress for each study mode
+  // Separate decks and progress for each study mode
+  const [readingItems, setReadingItems] = useState<SRSRecord[]>([]);
+  const [meaningItems, setMeaningItems] = useState<SRSRecord[]>([]);
   const [readingIndex, setReadingIndex] = useState(0);
   const [meaningIndex, setMeaningIndex] = useState(0);
   const [readingShowAnswer, setReadingShowAnswer] = useState(false);
   const [meaningShowAnswer, setMeaningShowAnswer] = useState(false);
 
-  // Load due items when modal opens
+
+  // Load due items when modal opens or lesson changes
   useEffect(() => {
     if (isOpen) {
       loadDueItems();
     } else {
-      // Reset completion states when modal closes
-      setIsCompleted(false);
-      setSessionCompleted(false);
+      // Reset states when modal closes
       setSessionStarted(false);
+      setReadingItems([]);
+      setMeaningItems([]);
       setReadingIndex(0);
       setMeaningIndex(0);
       setReadingShowAnswer(false);
       setMeaningShowAnswer(false);
     }
   }, [isOpen, lessonId]);
+
+  // Add a function to refresh data (useful when new words are added)
+  const refreshVocabulary = () => {
+    loadDueItems();
+  };
+
+  // Get current deck and progress based on study mode
+  const currentDeck = studyMode === 'reading' ? readingItems : meaningItems;
+  const currentIndex = studyMode === 'reading' ? readingIndex : meaningIndex;
+  const currentShowAnswer = studyMode === 'reading' ? readingShowAnswer : meaningShowAnswer;
 
   const loadDueItems = async (isSessionActive = false) => {
     setIsLoading(true);
@@ -86,45 +94,12 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
       const result = await response.json();
       
               if (result.success) {
-          // If no due items, automatically include all vocabulary
-          if (result.dueItems.length === 0) {
-            formData.set("includeAll", "true");
-            const allResponse = await fetch("/api/srs-progress", {
-              method: "POST",
-              body: formData
-            });
-            const allResult = await allResponse.json();
-            if (allResult.success) {
-              setDueItems(allResult.dueItems);
-              setOriginalItems(allResult.dueItems);
-              setStats(allResult.stats);
-            }
-          } else {
-            setDueItems(result.dueItems);
-            setOriginalItems(result.dueItems);
-            setStats(result.stats);
-          }
-          setCurrentIndex(0);
-          setShowAnswer(false);
+          // Store separate reading and meaning items
+          setReadingItems(result.readingItems || []);
+          setMeaningItems(result.meaningItems || []);
+          setStats(result.stats);
           setSessionStarted(true);
           
-          // Check if we've completed the session (no more items to review)
-          // Only show completion if we had original items and now have none due
-          console.log('loadDueItems check:', { 
-            dueItemsLength: result.dueItems.length, 
-            sessionStarted, 
-            isSessionActive,
-            originalItemsLength: originalItems.length 
-          });
-          
-          if (result.dueItems.length === 0 && (sessionStarted || isSessionActive)) {
-            console.log('Setting completion to true');
-            setIsCompleted(true);
-            setSessionCompleted(true);
-          } else {
-            setIsCompleted(false);
-            setSessionCompleted(false);
-          }
         } else {
           console.error("Failed to load due items:", result.error);
         }
@@ -135,38 +110,54 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
     }
   };
 
-    const restartStudy = () => {
-    setDueItems(originalItems);
-    setCurrentIndex(0);
-    setShowAnswer(false);
-    setQualityRating(null);
-    setIsCompleted(false);
-    setSessionCompleted(false);
-    setSessionStarted(false);
-    setReadingIndex(0);
-    setMeaningIndex(0);
-    setReadingShowAnswer(false);
-    setMeaningShowAnswer(false);
+    const restartStudy = async () => {
+    try {
+      // Load ALL vocabulary for the lesson (not just due items)
+      const formData = new FormData();
+      formData.append("userId", userId);
+      formData.append("lessonId", lessonId);
+      formData.append("includeAll", "true");
+
+      const response = await fetch("/api/srs-progress", {
+        method: "POST",
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setStats(result.stats);
+        
+        // Only reset the current study mode's deck
+        if (studyMode === 'reading') {
+          setReadingItems(result.readingItems || []);
+          setReadingIndex(0);
+          setReadingShowAnswer(false);
+        } else {
+          setMeaningItems(result.meaningItems || []);
+          setMeaningIndex(0);
+          setMeaningShowAnswer(false);
+        }
+      }
+      
+      // Reset only current mode state
+      setQualityRating(null);
+      setSessionStarted(false);
+    } catch (error) {
+      console.error("Error restarting study:", error);
+    }
   };
 
   const handleQualityRating = async (quality: number) => {
-    if (currentModeIndex >= dueItems.length) return;
+    if (currentIndex >= currentDeck.length) return;
 
     setIsSubmitting(true);
     try {
-      const currentItem = dueItems[currentModeIndex];
+      const currentItem = currentDeck[currentIndex];
       const formData = new FormData();
       formData.append("vocabularyId", currentItem.vocabularyId);
-      
-      // Set the rating for the current study mode, and use a default for the other
-      if (studyMode === 'reading') {
-        formData.append("readingQuality", quality.toString());
-        formData.append("meaningQuality", "3"); // Default to "easy" for meaning
-      } else {
-        formData.append("readingQuality", "3"); // Default to "easy" for reading
-        formData.append("meaningQuality", quality.toString());
-      }
-      
+      formData.append("studyMode", studyMode);
+      formData.append("quality", quality.toString());
       formData.append("lessonId", lessonId);
       formData.append("userId", userId);
 
@@ -178,8 +169,11 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
       const result = await response.json();
       
               if (result.success) {
+          // Use the updated due items from the API response
+          const newDueItems = result.updatedDueItems || [];
+          
           // Move to next item or check if session is complete
-          if (currentModeIndex + 1 < dueItems.length) {
+          if (currentIndex + 1 < currentDeck.length) {
             // Update the appropriate index based on study mode
             if (studyMode === 'reading') {
               setReadingIndex(readingIndex + 1);
@@ -190,14 +184,30 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
             }
             setQualityRating(null);
           } else {
-            // Check if this was the final round (all items rated Good or Easy)
-            // We're done when we finish a round and there are no more items to re-review
-            // The server will return only items that need re-review (rated 0 or 1)
-            console.log('Finishing round, calling loadDueItems with session active');
-            setSessionStarted(true); // Ensure session is marked as started
-            await loadDueItems(true); // Pass true to indicate session is active
-            // If loadDueItems returns no items, it means all items were rated Good or Easy
-            // We'll check this in the next render cycle
+            // End of current round - check if there are more items to review
+            console.log('End of round, checking for more items:', newDueItems.length);
+            
+            if (newDueItems.length > 0) {
+              // Start a new round with items that need re-review for this mode
+              if (studyMode === 'reading') {
+                setReadingItems(newDueItems);
+                setReadingIndex(0);
+                setReadingShowAnswer(false);
+              } else {
+                setMeaningItems(newDueItems);
+                setMeaningIndex(0);
+                setMeaningShowAnswer(false);
+              }
+              setQualityRating(null);
+              setSessionStarted(true);
+            } else {
+              // No more items to review for this mode - clear current deck to show completion
+              if (studyMode === 'reading') {
+                setReadingItems([]);
+              } else {
+                setMeaningItems([]);
+              }
+            }
           }
         } else {
           console.error("Failed to submit review:", result.error);
@@ -209,13 +219,11 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
     }
   };
 
-  // Get the current index and showAnswer state based on study mode
-  const currentModeIndex = studyMode === 'reading' ? readingIndex : meaningIndex;
-  const currentShowAnswer = studyMode === 'reading' ? readingShowAnswer : meaningShowAnswer;
-  const currentItem = dueItems[currentModeIndex];
-  const isLastItem = currentModeIndex === dueItems.length - 1;
+  // Get current item and progress
+  const currentItem = currentDeck[currentIndex];
+  const isLastItem = currentIndex === currentDeck.length - 1;
   // Progress advances when user has rated the current card (showAnswer is true)
-  const progress = dueItems.length > 0 ? ((currentModeIndex + (currentShowAnswer ? 1 : 0)) / dueItems.length) * 100 : 0;
+  const progress = currentDeck.length > 0 ? ((currentIndex + (currentShowAnswer ? 1 : 0)) / currentDeck.length) * 100 : 0;
 
   // Handle keyboard events
   useEffect(() => {
@@ -270,13 +278,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-2 text-gray-600">Loading vocabulary...</p>
           </div>
-        ) : dueItems.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-6xl mb-4">📚</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No vocabulary found!</h3>
-            <p className="text-gray-600">This lesson doesn't have any vocabulary to study. Please try refreshing the page.</p>
-          </div>
-        ) : (isCompleted && sessionCompleted) ? (
+        ) : currentDeck.length === 0 ? (
           <div className="space-y-6 flex-1 flex flex-col">
             {/* Study Mode Tabs */}
             <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
@@ -304,9 +306,16 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
 
             {/* Completion Content */}
             <div className="text-center py-8 flex-1 flex flex-col justify-center">
-              <div className="text-6xl mb-4">🎉</div>
-              <h3 className="text-2xl font-semibold text-gray-900 mb-2">Congratulations!</h3>
-              <p className="text-gray-600 mb-6">You've mastered all {originalItems.length} vocabulary items for {studyMode}!</p>
+              <div className="text-6xl mb-4">{sessionStarted ? '🎉' : '✅'}</div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-2">
+                {sessionStarted ? 'Congratulations!' : `All caught up with ${studyMode}!`}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {sessionStarted 
+                  ? `You've completed all ${studyMode} reviews!`
+                  : `No ${studyMode} reviews are due right now. Try the other tab or come back later when items are scheduled for review.`
+                }
+              </p>
               <div className="flex items-center justify-center space-x-4">
                 <Button
                   onClick={restartStudy}
@@ -354,7 +363,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
             <div className="bg-white border-2 border-gray-200 rounded-lg p-6 text-center flex-1 flex flex-col justify-center min-h-[300px]">
               <div className="mb-4">
                 <span className="text-sm text-gray-500">
-                  {currentModeIndex + 1} of {dueItems.length}
+                  {currentIndex + 1} of {currentDeck.length}
                 </span>
               </div>
               

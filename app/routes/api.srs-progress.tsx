@@ -1,4 +1,4 @@
-import { getDueItems, getSRSStats, getAllLessonVocabulary } from "../lib/srs.server";
+import { getDueReadingItems, getDueMeaningItems, getSRSStats, getAllLessonReadingVocabulary, getAllLessonMeaningVocabulary } from "../lib/srs.server";
 
 export async function action({ request }: { request: Request }) {
   try {
@@ -7,14 +7,16 @@ export async function action({ request }: { request: Request }) {
     const lessonId = formData.get("lessonId") as string;
     const includeAll = formData.get("includeAll") === "true";
 
-    let dueItems;
+    let readingItems, meaningItems;
     
     if (includeAll && lessonId) {
-      // Get all vocabulary for the lesson (for new users)
-      dueItems = await getAllLessonVocabulary(userId, lessonId);
+      // Get all vocabulary for the lesson (creates SRS records if needed)
+      readingItems = await getAllLessonReadingVocabulary(userId, lessonId);
+      meaningItems = await getAllLessonMeaningVocabulary(userId, lessonId);
     } else {
-      // Get only due items (for existing users)
-      dueItems = await getDueItems(userId, lessonId);
+      // Get only due items
+      readingItems = await getDueReadingItems(userId, lessonId);
+      meaningItems = await getDueMeaningItems(userId, lessonId);
     }
     
     // Get SRS statistics
@@ -22,7 +24,23 @@ export async function action({ request }: { request: Request }) {
 
     return new Response(JSON.stringify({
       success: true,
-      dueItems: dueItems.map((item: any) => ({
+      readingItems: readingItems.map((item: any) => ({
+        id: item.id,
+        vocabularyId: item.vocabularyId,
+        lessonId: item.lessonId,
+        repetition: item.repetition,
+        easiness: item.easiness,
+        interval: item.interval,
+        nextReview: item.nextReview,
+        quality: item.quality,
+        vocabulary: {
+          id: item.vocabulary.id,
+          word: item.vocabulary.word,
+          reading: item.vocabulary.reading,
+          meaning: item.vocabulary.meaning
+        }
+      })),
+      meaningItems: meaningItems.map((item: any) => ({
         id: item.id,
         vocabularyId: item.vocabularyId,
         lessonId: item.lessonId,

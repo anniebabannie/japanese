@@ -5,6 +5,14 @@ import Button from "~/components/Button";
 import Modal from "~/components/Modal";
 import StudyModal from "~/components/StudyModal";
 import StoryText from "~/components/StoryText";
+import type { Route } from "./+types/lessons.$id";
+
+export function meta({ data }: Route.MetaArgs) {
+  return [
+    { title: data?.lesson ? `${data.lesson.title} - Japanese Learning` : "Lesson - Japanese Learning" },
+    { name: "description", content: data?.lesson?.description || "Japanese language lesson" },
+  ];
+}
 
 export async function loader({ params }: { params: { id: string } }) {
   const { db } = await import("../lib/db.server");

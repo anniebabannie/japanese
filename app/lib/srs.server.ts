@@ -33,6 +33,8 @@ export function sm2Algorithm(
       newInterval = 6;
     } else {
       newInterval = Math.round(interval * finalEasiness);
+      // Cap maximum interval to 365 days (1 year) to prevent DateTime overflow
+      newInterval = Math.min(newInterval, 365);
     }
   }
   
@@ -45,19 +47,19 @@ export function sm2Algorithm(
 }
 
 // Basic CRUD functions for SRS records
-export async function getOrCreateSRSRecord(
+export async function getOrCreateReadingSRS(
   userId: string,
   vocabularyId: string,
   lessonId: string
 ) {
-  let srsRecord = await db.vocabularySRS.findUnique({
+  let srsRecord = await db.readingSRS.findUnique({
     where: { userId_vocabularyId: { userId, vocabularyId } },
     include: { vocabulary: true }
   });
 
   if (!srsRecord) {
-    // Create new SRS record for this vocabulary
-    srsRecord = await db.vocabularySRS.create({
+    // Create new reading SRS record
+    srsRecord = await db.readingSRS.create({
       data: {
         userId,
         vocabularyId,
@@ -75,32 +77,56 @@ export async function getOrCreateSRSRecord(
   return srsRecord;
 }
 
-export async function updateSRSRecord(
+export async function getOrCreateMeaningSRS(
   userId: string,
   vocabularyId: string,
-  readingQuality: number,
-  meaningQuality: number,
+  lessonId: string
+) {
+  let srsRecord = await db.meaningSRS.findUnique({
+    where: { userId_vocabularyId: { userId, vocabularyId } },
+    include: { vocabulary: true }
+  });
+
+  if (!srsRecord) {
+    // Create new meaning SRS record
+    srsRecord = await db.meaningSRS.create({
+      data: {
+        userId,
+        vocabularyId,
+        lessonId,
+        repetition: 0,
+        easiness: 2.5,
+        interval: 0,
+        nextReview: new Date(),
+        totalReviews: 0
+      },
+      include: { vocabulary: true }
+    });
+  }
+
+  return srsRecord;
+}
+
+export async function updateReadingSRS(
+  userId: string,
+  vocabularyId: string,
+  quality: number,
   lessonId?: string
 ) {
-  const srsRecord = await getOrCreateSRSRecord(userId, vocabularyId, lessonId || "");
-  
-  // Use the lower quality rating to determine the overall SRS progression
-  // This ensures both skills are mastered before moving to longer intervals
-  const overallQuality = Math.min(readingQuality, meaningQuality);
+  const srsRecord = await getOrCreateReadingSRS(userId, vocabularyId, lessonId || "");
   
   const newData = sm2Algorithm(
     srsRecord.repetition,
     srsRecord.easiness,
     srsRecord.interval,
-    overallQuality
+    quality
   );
 
-  return await db.vocabularySRS.update({
+  return await db.readingSRS.update({
     where: { id: srsRecord.id },
     data: {
       ...newData,
-      readingQuality,
-      meaningQuality,
+      quality,
       totalReviews: srsRecord.totalReviews + 1,
       lastReviewed: new Date()
     },
@@ -108,24 +134,142 @@ export async function updateSRSRecord(
   });
 }
 
-export async function getDueItems(userId: string, lessonId?: string) {
-  const whereClause: any = {
-    userId,
-    nextReview: { lte: new Date() }
-  };
+export async function updateMeaningSRS(
+  userId: string,
+  vocabularyId: string,
+  quality: number,
+  lessonId?: string
+) {
+  const srsRecord = await getOrCreateMeaningSRS(userId, vocabularyId, lessonId || "");
+  
+  const newData = sm2Algorithm(
+    srsRecord.repetition,
+    srsRecord.easiness,
+    srsRecord.interval,
+    quality
+  );
 
+  return await db.meaningSRS.update({
+    where: { id: srsRecord.id },
+    data: {
+      ...newData,
+      quality,
+      totalReviews: srsRecord.totalReviews + 1,
+      lastReviewed: new Date()
+    },
+    include: { vocabulary: true }
+  });
+}
+
+export async function getDueReadingItems(userId: string, lessonId?: string) {
   if (lessonId) {
-    whereClause.lessonId = lessonId;
-  }
+    // Get all vocabulary for the lesson
+    const lesson = await db.lesson.findUnique({
+      where: { id: lessonId },
+      include: { vocabulary: true }
+    });
 
-  return await db.vocabularySRS.findMany({
-    where: whereClause,
+    if (!lesson) {
+      throw new Error("Lesson not found");
+    }
+
+    // Get existing reading SRS records that are due
+    const existingReadingSRS = await db.readingSRS.findMany({
+      where: {
+        userId,
+        lessonId,
+        nextReview: { lte: new Date() }
+      },
+      include: { vocabulary: true },
+      orderBy: { nextReview: 'asc' }
+    });
+
+    // Find vocabulary that doesn't have ANY reading SRS records yet (truly new items)
+    const allExistingReadingSRS = await db.readingSRS.findMany({
+      where: {
+        userId,
+        lessonId
+      }
+    });
+    const existingVocabIds = allExistingReadingSRS.map(record => record.vocabularyId);
+    const newVocabulary = lesson.vocabulary.filter(vocab => !existingVocabIds.includes(vocab.id));
+
+    // Create reading SRS records for new vocabulary
+    const newReadingSRS = [];
+    for (const vocab of newVocabulary) {
+      const srsRecord = await getOrCreateReadingSRS(userId, vocab.id, lessonId);
+      newReadingSRS.push(srsRecord);
+    }
+
+    return [...existingReadingSRS, ...newReadingSRS];
+  }
+  
+  // For general requests, only return existing due items
+  return await db.readingSRS.findMany({
+    where: {
+      userId,
+      nextReview: { lte: new Date() }
+    },
     include: { vocabulary: true },
     orderBy: { nextReview: 'asc' }
   });
 }
 
-export async function getAllLessonVocabulary(userId: string, lessonId: string) {
+export async function getDueMeaningItems(userId: string, lessonId?: string) {
+  if (lessonId) {
+    // Get all vocabulary for the lesson
+    const lesson = await db.lesson.findUnique({
+      where: { id: lessonId },
+      include: { vocabulary: true }
+    });
+
+    if (!lesson) {
+      throw new Error("Lesson not found");
+    }
+
+    // Get existing meaning SRS records that are due
+    const existingMeaningSRS = await db.meaningSRS.findMany({
+      where: {
+        userId,
+        lessonId,
+        nextReview: { lte: new Date() }
+      },
+      include: { vocabulary: true },
+      orderBy: { nextReview: 'asc' }
+    });
+
+    // Find vocabulary that doesn't have ANY meaning SRS records yet (truly new items)
+    const allExistingMeaningSRS = await db.meaningSRS.findMany({
+      where: {
+        userId,
+        lessonId
+      }
+    });
+    const existingVocabIds = allExistingMeaningSRS.map(record => record.vocabularyId);
+    const newVocabulary = lesson.vocabulary.filter(vocab => !existingVocabIds.includes(vocab.id));
+
+    // Create meaning SRS records for new vocabulary
+    const newMeaningSRS = [];
+    for (const vocab of newVocabulary) {
+      const srsRecord = await getOrCreateMeaningSRS(userId, vocab.id, lessonId);
+      newMeaningSRS.push(srsRecord);
+    }
+
+    return [...existingMeaningSRS, ...newMeaningSRS];
+  }
+  
+  // For general requests, only return existing due items
+  return await db.meaningSRS.findMany({
+    where: {
+      userId,
+      nextReview: { lte: new Date() }
+    },
+    include: { vocabulary: true },
+    orderBy: { nextReview: 'asc' }
+  });
+}
+
+export async function getAllLessonReadingVocabulary(userId: string, lessonId: string) {
   // Get all vocabulary for the lesson
   const lesson = await db.lesson.findUnique({
     where: { id: lessonId },
@@ -136,10 +280,31 @@ export async function getAllLessonVocabulary(userId: string, lessonId: string) {
     throw new Error("Lesson not found");
   }
 
-  // Get or create SRS records for all vocabulary
+  // Get or create reading SRS records for all vocabulary
   const srsRecords = [];
   for (const vocab of lesson.vocabulary) {
-    const srsRecord = await getOrCreateSRSRecord(userId, vocab.id, lessonId);
+    const srsRecord = await getOrCreateReadingSRS(userId, vocab.id, lessonId);
+    srsRecords.push(srsRecord);
+  }
+
+  return srsRecords;
+}
+
+export async function getAllLessonMeaningVocabulary(userId: string, lessonId: string) {
+  // Get all vocabulary for the lesson
+  const lesson = await db.lesson.findUnique({
+    where: { id: lessonId },
+    include: { vocabulary: true }
+  });
+
+  if (!lesson) {
+    throw new Error("Lesson not found");
+  }
+
+  // Get or create meaning SRS records for all vocabulary
+  const srsRecords = [];
+  for (const vocab of lesson.vocabulary) {
+    const srsRecord = await getOrCreateMeaningSRS(userId, vocab.id, lessonId);
     srsRecords.push(srsRecord);
   }
 
@@ -152,26 +317,35 @@ export async function getSRSStats(userId: string, lessonId?: string) {
     whereClause.lessonId = lessonId;
   }
 
-  const records = await db.vocabularySRS.findMany({
-    where: whereClause
-  });
+  // Get both reading and meaning records
+  const [readingRecords, meaningRecords] = await Promise.all([
+    db.readingSRS.findMany({ where: whereClause }),
+    db.meaningSRS.findMany({ where: whereClause })
+  ]);
 
-  const totalItems = records.length;
-  const dueItems = records.filter((r: any) => r.nextReview <= new Date()).length;
+  const totalReadingItems = readingRecords.length;
+  const totalMeaningItems = meaningRecords.length;
+  const totalItems = Math.max(totalReadingItems, totalMeaningItems); // Unique vocabulary count
+  
+  const dueReadingItems = readingRecords.filter((r: any) => r.nextReview <= new Date()).length;
+  const dueMeaningItems = meaningRecords.filter((r: any) => r.nextReview <= new Date()).length;
+  const dueItems = dueReadingItems + dueMeaningItems;
+
   const averageEasiness = totalItems > 0 
-    ? records.reduce((sum: number, r: any) => sum + r.easiness, 0) / totalItems 
+    ? (readingRecords.reduce((sum: number, r: any) => sum + r.easiness, 0) + 
+       meaningRecords.reduce((sum: number, r: any) => sum + r.easiness, 0)) / (totalReadingItems + totalMeaningItems)
     : 0;
 
   // Calculate average quality for both reading and meaning
-  const readingRecords = records.filter((r: any) => r.readingQuality !== null);
-  const meaningRecords = records.filter((r: any) => r.meaningQuality !== null);
+  const reviewedReadingRecords = readingRecords.filter((r: any) => r.quality !== null);
+  const reviewedMeaningRecords = meaningRecords.filter((r: any) => r.quality !== null);
   
-  const averageReadingQuality = readingRecords.length > 0 
-    ? readingRecords.reduce((sum: number, r: any) => sum + (r.readingQuality || 0), 0) / readingRecords.length
+  const averageReadingQuality = reviewedReadingRecords.length > 0 
+    ? reviewedReadingRecords.reduce((sum: number, r: any) => sum + (r.quality || 0), 0) / reviewedReadingRecords.length
     : 0;
     
-  const averageMeaningQuality = meaningRecords.length > 0 
-    ? meaningRecords.reduce((sum: number, r: any) => sum + (r.meaningQuality || 0), 0) / meaningRecords.length
+  const averageMeaningQuality = reviewedMeaningRecords.length > 0 
+    ? reviewedMeaningRecords.reduce((sum: number, r: any) => sum + (r.quality || 0), 0) / reviewedMeaningRecords.length
     : 0;
 
   return {
