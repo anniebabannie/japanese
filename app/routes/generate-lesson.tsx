@@ -70,7 +70,7 @@ export async function action(args: ActionFunctionArgs) {
 
 export default function GenerateLesson() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-indigo-100 py-12">
       <div className="max-w-2xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
@@ -91,7 +91,7 @@ export default function GenerateLesson() {
                 id="level"
                 name="level"
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               >
                 <option value="">Select a level</option>
                 <option value="N4">N4 - Basic to Intermediate</option>
@@ -108,7 +108,7 @@ export default function GenerateLesson() {
                 id="topic"
                 name="topic"
                 placeholder="e.g., 'te-form verbs', 'conditional sentences', 'business Japanese'"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
               <p className="text-sm text-gray-500 mt-2">
                 Leave blank for a general lesson, or specify a topic to focus on
@@ -124,7 +124,7 @@ export default function GenerateLesson() {
               </a>
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                className="flex-1 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium transition-colors"
               >
                 Generate Lesson
               </button>

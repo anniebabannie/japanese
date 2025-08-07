@@ -105,7 +105,7 @@ export default function LessonsIndex() {
   const { lessons } = useLoaderData<typeof loader>();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-indigo-100">
       <div className="max-w-6xl mx-auto px-4 py-16">
         {/* Header */}
         <div className="text-center mb-12">
@@ -130,7 +130,7 @@ export default function LessonsIndex() {
             <div className="mt-6">
               <a
                 href="/generate-lesson"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
               >
                 <svg className="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -147,13 +147,13 @@ export default function LessonsIndex() {
                   <div className="flex items-center justify-between mb-4">
                     <a
                       href={`/lessons/${lesson.id}`}
-                      className="text-lg font-semibold text-gray-900 line-clamp-2 hover:text-blue-600 transition-colors flex-1 mr-3"
+                      className="text-lg font-semibold text-gray-900 line-clamp-2 hover:text-teal-600 transition-colors flex-1 mr-3"
                     >
                       {lesson.title}
                     </a>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 ${
                       lesson.level === 'N4' 
-                        ? 'bg-blue-100 text-blue-800' 
+                        ? 'bg-teal-100 text-teal-800' 
                         : lesson.level === 'N3'
                         ? 'bg-green-100 text-green-800'
                         : 'bg-purple-100 text-purple-800'
@@ -171,7 +171,7 @@ export default function LessonsIndex() {
                     <ul className="space-y-1">
                       {lesson.grammarPoints.map((grammarPoint) => (
                         <li key={grammarPoint.id} className="text-sm text-gray-600 flex items-start">
-                          <span className="text-blue-500 mr-2">•</span>
+                          <span className="text-teal-500 mr-2">•</span>
                           <span>{grammarPoint.point}</span>
                         </li>
                       ))}
@@ -184,7 +184,7 @@ export default function LessonsIndex() {
                     </span>
                     <a
                       href={`/lessons/${lesson.id}`}
-                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-md transition-colors"
                     >
                       View Lesson
                       <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -352,13 +352,13 @@ export default function LessonView() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-indigo-100 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Back Link */}
           <div className="mb-6">
             <a
               href="/"
-              className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              className="inline-flex items-center text-teal-600 hover:text-teal-700 font-medium transition-colors"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -376,7 +376,7 @@ export default function LessonView() {
                 <div className="mb-4">
                   <div className="flex items-center space-x-4 mb-2">
                     <h1 className="text-3xl font-bold text-gray-900">{lesson.title}</h1>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800">
                       JLPT {lesson.level}
                     </span>
                   </div>
@@ -429,8 +429,8 @@ export default function LessonView() {
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-6">Story</h2>
                 {isLookingUpWord && (
-                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                    <p className="text-blue-800">Looking up "{selectedWord}"...</p>
+                  <div className="mb-4 p-3 bg-teal-50 border border-teal-200 rounded-md">
+                    <p className="text-teal-800">Looking up "{selectedWord}"...</p>
                   </div>
                 )}
                 <StoryText 
@@ -490,7 +490,7 @@ export default function LessonView() {
                 </div>
                 <div className="space-y-6">
                   {lesson.grammarPoints.map((grammarPoint, index) => (
-                    <div key={grammarPoint.id} className="border-l-4 border-blue-500 pl-4">
+                    <div key={grammarPoint.id} className="border-l-4 border-teal-500 pl-4">
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="text-lg font-medium text-gray-900">
                           {index + 1}. {grammarPoint.point}
@@ -499,7 +499,7 @@ export default function LessonView() {
                           onClick={() => toggleGrammarExplanation(grammarPoint.id)}
                           variant="ghost"
                           size="sm"
-                          className="text-blue-600 hover:text-blue-700"
+                          className="text-teal-600 hover:text-teal-700"
                         >
                           {expandedGrammarPoints[grammarPoint.id] ? "Hide Explanation" : "Show Explanation"}
                         </Button>
@@ -586,7 +586,7 @@ export default function LessonView() {
                             placeholder="答えを入力してください"
                             value={userAnswers[question.id] || ""}
                             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-japanese"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent font-japanese"
                           />
                         </div>
                       )}
@@ -599,7 +599,7 @@ export default function LessonView() {
                             rows={3}
                             value={userAnswers[question.id] || ""}
                             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-japanese"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent font-japanese"
                           />
                         </div>
                       )}
@@ -636,7 +636,7 @@ export default function LessonView() {
                       )}
 
                       {showAnswers[question.id] && (
-                        <div className="mt-4 p-4 bg-blue-50 rounded-md">
+                        <div className="mt-4 p-4 bg-teal-50 rounded-md">
                           <p className="text-gray-900 font-medium font-japanese">答え: {question.answer}</p>
                           {question.explanation && (
                             <p className="text-gray-700 mt-2 text-sm">{question.explanation}</p>
@@ -735,7 +735,7 @@ export default function LessonView() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h3 
-                            className="text-lg font-medium text-gray-900 font-japanese cursor-pointer hover:text-blue-600 transition-colors"
+                            className="text-lg font-medium text-gray-900 font-japanese cursor-pointer hover:text-teal-600 transition-colors"
                             onClick={() => handleVocabularyWordClick(vocab)}
                             title="Click to highlight this word in the story"
                           >
@@ -748,7 +748,7 @@ export default function LessonView() {
                           )}
                           <p className="text-gray-700 mt-1">{vocab.meaning}</p>
                           {vocab.conjugationInfo && (
-                            <p className="text-xs text-blue-600 mt-1">
+                            <p className="text-xs text-teal-600 mt-1">
                               {vocab.originalForm} → {vocab.conjugationInfo}
                             </p>
                           )}

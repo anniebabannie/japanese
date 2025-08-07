@@ -266,7 +266,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
         {/* Progress Bar */}
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div 
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            className="bg-teal-600 h-2 rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -275,7 +275,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
 
         {isLoading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
             <p className="mt-2 text-gray-600">Loading vocabulary...</p>
           </div>
         ) : currentDeck.length === 0 ? (
@@ -341,7 +341,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
                 onClick={() => setStudyMode('reading')}
                 className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
                   studyMode === 'reading'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-teal-500 text-teal-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -351,7 +351,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
                 onClick={() => setStudyMode('meaning')}
                 className={`flex-1 py-2 px-4 text-sm font-medium border-b-2 transition-colors ${
                   studyMode === 'meaning'
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-teal-500 text-teal-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -374,7 +374,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
                     {currentItem.vocabulary.word}
                   </h2>
                   {currentShowAnswer && currentItem.vocabulary.reading && (
-                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <div className="mt-4 p-4 bg-teal-50 rounded-lg">
                       <p className="text-lg font-medium text-gray-900 font-japanese">
                         {currentItem.vocabulary.reading}
                       </p>
@@ -397,7 +397,7 @@ export default function StudyModal({ isOpen, onClose, lessonId, userId = "defaul
                     {currentItem.vocabulary.word}
                   </h2>
                   {currentShowAnswer && (
-                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <div className="mt-4 p-4 bg-teal-50 rounded-lg">
                       <p className="text-lg font-medium text-gray-900">
                         {currentItem.vocabulary.meaning}
                       </p>

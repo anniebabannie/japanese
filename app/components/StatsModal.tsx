@@ -42,7 +42,7 @@ const getProgressColor = (quality: number | null, nextReview: string) => {
   } else {
     // Future review - green for learned
     if (quality >= 2) return "bg-green-100 text-green-800"; // Learned
-    return "bg-blue-100 text-blue-800"; // Learning
+    return "bg-teal-100 text-teal-800"; // Learning
   }
 };
 
@@ -108,7 +108,7 @@ export default function StatsModal({ isOpen, onClose, lessonId, userId = "defaul
       <div className="space-y-4">
         {isLoading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto"></div>
             <p className="mt-2 text-gray-600">Loading vocabulary stats...</p>
           </div>
         ) : (

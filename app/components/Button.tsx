@@ -30,11 +30,11 @@ export default function Button({
   const baseClasses = 'font-medium rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2';
   
   const variantClasses = {
-    blue: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
+    blue: 'bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500',
     gray: 'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500',
     red: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
     green: 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500',
-    ghost: 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 focus:ring-blue-500',
+    ghost: 'text-teal-600 hover:text-teal-700 hover:bg-teal-50 focus:ring-teal-500',
   };
   
   const sizeClasses = {
