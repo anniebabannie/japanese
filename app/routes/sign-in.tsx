@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/react-router";
+import { CLERK_ROUTES } from "../lib/constants";
 
 export default function SignInPage() {
   return (
@@ -15,9 +16,9 @@ export default function SignInPage() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <SignIn 
             routing="path" 
-            path="/sign-in"
-            signUpUrl="/sign-up"
-            redirectUrl="/lessons"
+            path={CLERK_ROUTES.SIGN_IN}
+            signUpUrl={CLERK_ROUTES.SIGN_UP}
+            forceRedirectUrl={CLERK_ROUTES.AFTER_SIGN_IN}
           />
         </div>
       </div>

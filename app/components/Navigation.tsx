@@ -1,6 +1,7 @@
 import { SignedIn, SignedOut, UserButton } from "@clerk/react-router";
 import { Link } from "react-router";
 import Button from "./Button";
+import { CLERK_ROUTES } from "../lib/constants";
 
 export default function Navigation() {
 
@@ -32,12 +33,12 @@ export default function Navigation() {
               >
                 Home
               </Link>
-              <Link to="/sign-in">
+              <Link to={CLERK_ROUTES.SIGN_IN}>
                 <Button variant="ghost" size="sm">
                   Sign In
                 </Button>
               </Link>
-              <Link to="/sign-up">
+              <Link to={CLERK_ROUTES.SIGN_UP}>
                 <Button size="sm">
                   Sign Up
                 </Button>
@@ -53,7 +54,7 @@ export default function Navigation() {
                 Home
               </Link>
               <Link
-                to="/lessons"
+                to={CLERK_ROUTES.AFTER_SIGN_IN}
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 My Lessons

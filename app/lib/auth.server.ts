@@ -1,5 +1,6 @@
 import { getAuth } from "@clerk/react-router/ssr.server";
 import { redirect } from "react-router";
+import { CLERK_ROUTES } from "./constants";
 
 /**
  * Get the current user from a request
@@ -15,7 +16,7 @@ export async function getCurrentUser(args: any) {
  * Redirects to sign-in if not authenticated
  * Returns the user ID if authenticated
  */
-export async function requireAuth(args: any, redirectTo: string = "/sign-in") {
+export async function requireAuth(args: any, redirectTo: string = CLERK_ROUTES.SIGN_IN) {
   const { userId } = await getAuth(args);
   
   if (!userId) {

@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import Button from "../components/Button";
+import { CLERK_ROUTES } from "../lib/constants";
 
 export default function Index() {
   return (
@@ -17,7 +18,7 @@ export default function Index() {
           </p>
           <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
             <div className="rounded-md shadow">
-              <Link to="/sign-up">
+              <Link to={CLERK_ROUTES.SIGN_UP}>
                 <Button size="lg" className="w-full flex items-center justify-center px-8 py-3 text-base font-medium rounded-md">
                   Get Started Free
                 </Button>
@@ -100,7 +101,7 @@ export default function Index() {
           </h2>
           <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
             <div className="inline-flex rounded-md shadow">
-              <Link to="/sign-up">
+              <Link to={CLERK_ROUTES.SIGN_UP}>
                 <Button variant="white" size="lg" className="inline-flex items-center justify-center px-5 py-3 text-base font-medium rounded-md">
                   Get started
                   <svg className="ml-2 -mr-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
