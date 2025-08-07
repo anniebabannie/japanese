@@ -1,14 +1,18 @@
 import { updateReadingSRS, updateMeaningSRS } from "../lib/srs.server";
 import { db } from "../lib/db.server";
+import { requireAuth } from "../lib/auth.server";
+import type { ActionFunctionArgs } from "react-router";
 
-export async function action({ request }: { request: Request }) {
+export async function action(args: ActionFunctionArgs) {
   try {
-    const formData = await request.formData();
+    // Require authentication
+    const userId = await requireAuth(args);
+    
+    const formData = await args.request.formData();
     const vocabularyId = formData.get("vocabularyId") as string;
     const studyMode = formData.get("studyMode") as string; // 'reading' or 'meaning'
     const quality = parseInt(formData.get("quality") as string);
     const lessonId = formData.get("lessonId") as string;
-    const userId = formData.get("userId") as string || "default-user";
 
     if (!vocabularyId || !studyMode || isNaN(quality) || quality < 0 || quality > 3 ||
         !['reading', 'meaning'].includes(studyMode)) {

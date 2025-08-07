@@ -12,6 +12,9 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@clerk/backend": "^2.6.3",
+    "@clerk/clerk-react": "^5.39.0",
+    "@clerk/react-router": "^1.8.10",
     "@prisma/client": "^6.12.0",
     "@react-router/node": "^7.7.1",
     "@react-router/serve": "^7.7.1",

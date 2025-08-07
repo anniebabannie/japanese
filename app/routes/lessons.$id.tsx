@@ -1,4 +1,5 @@
 import { Form, useActionData, useNavigation, useLoaderData } from "react-router";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import Button from "~/components/Button";
@@ -15,11 +16,18 @@ export function meta({ data }: Route.MetaArgs) {
   ];
 }
 
-export async function loader({ params }: { params: { id: string } }) {
+export async function loader(args: Route.LoaderArgs) {
+  const { requireAuth } = await import("../lib/auth.server");
   const { db } = await import("../lib/db.server");
   
-  const lesson = await db.lesson.findUnique({
-    where: { id: params.id },
+  // Require authentication
+  const userId = await requireAuth(args);
+  
+  const lesson = await db.lesson.findFirst({
+    where: { 
+      id: args.params.id,
+      userId: userId, // Ensure user can only access their own lessons
+    },
     include: {
       grammarPoints: { orderBy: { order: 'asc' } },
       vocabulary: { orderBy: { order: 'asc' } },
@@ -34,8 +42,13 @@ export async function loader({ params }: { params: { id: string } }) {
   return { lesson };
 }
 
-export async function action({ request, params }: { request: Request; params: { id: string } }) {
-  const formData = await request.formData();
+export async function action(args: Route.ActionArgs) {
+  const { requireAuth } = await import("../lib/auth.server");
+  
+  // Require authentication
+  const userId = await requireAuth(args);
+  
+  const formData = await args.request.formData();
   const action = formData.get("action");
 
   if (action === "generate-more-questions") {
@@ -43,9 +56,12 @@ export async function action({ request, params }: { request: Request; params: { 
       const { db } = await import("../lib/db.server");
       const { generateAdditionalQuestions } = await import("../lib/ai.server");
 
-      // Get the lesson data first
-      const lesson = await db.lesson.findUnique({
-        where: { id: params.id },
+      // Get the lesson data first - ensure it belongs to the user
+      const lesson = await db.lesson.findFirst({
+        where: { 
+          id: args.params.id,
+          userId: userId,
+        },
         include: {
           grammarPoints: { orderBy: { order: 'asc' } },
           vocabulary: { orderBy: { order: 'asc' } },
@@ -58,7 +74,7 @@ export async function action({ request, params }: { request: Request; params: { 
 
       // Delete all existing questions for this lesson
       await db.question.deleteMany({
-        where: { lessonId: params.id },
+        where: { lessonId: args.params.id },
       });
 
       // Transform vocabulary to match the interface
@@ -70,7 +86,7 @@ export async function action({ request, params }: { request: Request; params: { 
 
       // Generate completely new questions
       const newQuestions = await generateAdditionalQuestions(
-        params.id,
+        args.params.id,
         [], // Empty array since we're starting fresh
         {
           story: lesson.story,
@@ -86,7 +102,7 @@ export async function action({ request, params }: { request: Request; params: { 
         newQuestions.map((q, index) =>
           db.question.create({
             data: {
-              lessonId: params.id,
+              lessonId: args.params.id,
               question: q.question,
               answer: q.answer,
               options: q.options,
@@ -100,7 +116,7 @@ export async function action({ request, params }: { request: Request; params: { 
 
       // Get the updated lesson with new questions
       const updatedLesson = await db.lesson.findUnique({
-        where: { id: params.id },
+        where: { id: args.params.id },
         include: {
           grammarPoints: { orderBy: { order: 'asc' } },
           vocabulary: { orderBy: { order: 'asc' } },
@@ -492,7 +508,7 @@ export default function LessonView() {
                       {expandedGrammarPoints[grammarPoint.id] && (
                         <>
                           <div className="text-gray-700 mb-3 prose prose-sm max-w-none [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>h1]:mb-3 [&>h2]:mb-3 [&>h3]:mb-3 [&>h4]:mb-3 [&>h5]:mb-3 [&>h6]:mb-3">
-                            <ReactMarkdown>{grammarPoint.explanation}</ReactMarkdown>
+                            <ReactMarkdown>{grammarPoint.explanation.replace(/\\n/g, '\n')}</ReactMarkdown>
                           </div>
                           <div className="bg-gray-50 rounded-md p-4">
                             <h4 className="text-sm font-medium text-gray-900 mb-2">Examples:</h4>

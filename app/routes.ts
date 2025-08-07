@@ -8,6 +8,9 @@ import {
 export default [
   layout("./routes/layout.tsx", [
     index("./routes/_index.tsx"),
+    route("sign-in", "./routes/sign-in.tsx"),
+    route("sign-up", "./routes/sign-up.tsx"),
+    route("lessons", "./routes/lessons._index.tsx"),
     route("lessons/:id", "./routes/lessons.$id.tsx"),
     route("generate-lesson", "./routes/generate-lesson.tsx"),
     route("api/delete-lesson", "./routes/api.delete-lesson.tsx"),

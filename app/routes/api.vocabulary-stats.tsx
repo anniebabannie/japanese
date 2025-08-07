@@ -1,9 +1,14 @@
 import { db } from "../lib/db.server";
+import { requireAuth } from "../lib/auth.server";
+import type { ActionFunctionArgs } from "react-router";
 
-export async function action({ request }: { request: Request }) {
+export async function action(args: ActionFunctionArgs) {
   try {
-    const body = await request.json();
-    const { userId = "default-user", lessonId } = body;
+    // Require authentication
+    const userId = await requireAuth(args);
+    
+    const body = await args.request.json();
+    const { lessonId } = body;
 
     if (!lessonId) {
       return new Response(JSON.stringify({ 
@@ -15,9 +20,12 @@ export async function action({ request }: { request: Request }) {
       });
     }
 
-    // Get all vocabulary for the lesson
-    const lesson = await db.lesson.findUnique({
-      where: { id: lessonId },
+    // Get all vocabulary for the lesson - ensure it belongs to the user
+    const lesson = await db.lesson.findFirst({
+      where: { 
+        id: lessonId,
+        userId: userId,
+      },
       include: { 
         vocabulary: {
           orderBy: { order: 'asc' }

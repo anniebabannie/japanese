@@ -1,12 +1,17 @@
 import { db } from "../lib/db.server";
+import { requireAuth } from "../lib/auth.server";
+import type { ActionFunctionArgs } from "react-router";
 
-export async function action({ request }: { request: Request }) {
-  if (request.method !== "DELETE") {
+export async function action(args: ActionFunctionArgs) {
+  if (args.request.method !== "DELETE") {
     return new Response("Method not allowed", { status: 405 });
   }
 
   try {
-    const url = new URL(request.url);
+    // Require authentication
+    const userId = await requireAuth(args);
+    
+    const url = new URL(args.request.url);
     const lessonId = url.searchParams.get("id");
     
     if (!lessonId) {
@@ -15,8 +20,12 @@ export async function action({ request }: { request: Request }) {
 
     console.log("DELETE request received for lesson:", lessonId);
     
-    await db.lesson.delete({
-      where: { id: lessonId },
+    // Ensure user can only delete their own lessons
+    await db.lesson.deleteMany({
+      where: { 
+        id: lessonId,
+        userId: userId,
+      },
     });
     
     console.log("Lesson deleted successfully");

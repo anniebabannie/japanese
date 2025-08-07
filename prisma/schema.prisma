@@ -9,6 +9,7 @@ datasource db {
 
 model Lesson {
   id            String        @id @default(cuid())
+  userId        String?       // Clerk user ID - nullable for migration
   title         String
   description   String
   level         JLPTLevel
@@ -20,6 +21,8 @@ model Lesson {
   vocabulary    Vocabulary[]
   readingSRS    ReadingSRS[]
   meaningSRS    MeaningSRS[]
+  
+  @@index([userId])
 }
 
 model GrammarPoint {

@@ -36,6 +36,61 @@ export interface GeneratedLesson {
   questions: Question[];
 }
 
+// Shared comprehensive grammar generation prompt
+function getGrammarGenerationPrompt(level: string): string {
+  return `For grammar points:
+- Focus on grammar patterns that actually appear in the text and are appropriate for JLPT ${level} level
+- Prioritize grammar patterns commonly tested on JLPT ${level} exams
+- Provide comprehensive, detailed explanations that include:
+  * The exact meaning and usage of the grammar pattern
+  * When and how to use it (context, situations, formality level)
+  * Grammatical structure breakdown (required vs optional parts)
+  * Common variations or related forms
+  * How it differs from similar patterns
+  * Typical learner mistakes and how to avoid them (be encouraging!)
+  * Politeness levels and register considerations
+  * Any special notes about conjugation or particle usage
+- Give 3-4 examples with English translations: one from the text, plus additional examples showing different contexts
+- Format examples as "Japanese sentence - English translation"
+- Write in a clear, direct tone that gets straight to the point - no introductory phrases like "Hello" or "Let's dive into"
+- Use markdown formatting for better readability (bold, italics, bullet points)
+- Make explanations specific and actionable, not vague generalizations
+- Include information about politeness levels, formality, and register when relevant
+- Make it feel like a helpful tutor explaining things clearly and directly
+- IMPORTANT: Ensure all JSON is properly escaped. Use \\\\n for line breaks and escape any quotes within the explanation text
+
+CRITICAL: Each explanation must be 200-300 words, direct and engaging:
+- Start directly with the explanation - no introductory phrases like "Hello" or "Let's dive into"
+- Write in a clear, engaging tone that gets straight to the point
+- Use engaging language, analogies, and real-world examples
+- Include the exact meaning and primary usage
+- Explain when to use it (context, situations, formality level)
+- Break down the grammatical structure (required vs optional parts)
+- Show common variations or related forms
+- Explain how it differs from similar patterns
+- Share typical learner mistakes and how to avoid them (be encouraging!)
+- Cover politeness levels and register considerations
+- Add any special notes about conjugation or particle usage
+- Use markdown formatting for better readability (bold, italics, bullet points)
+- Make it feel like a helpful tutor explaining things clearly and directly
+
+EXAMPLE OF PROPER EXPLANATION LENGTH AND STYLE:
+"**〜た理由は〜だからです** is your go-to way to explain *why* something happened in the past. It's like saying "The reason X happened is because Y" - but in a really polite, formal way that Japanese people love!
+
+Here's how it works: you've got two main parts. The first part (with **〜た**) tells us *what* happened, and the second part (with **〜だからです**) tells us *why* it happened. It's like building a little story with a clear cause-and-effect relationship.
+
+**When should you use this?** Perfect for formal situations like job interviews, academic writing, or when you want to sound really polished and professional. It's more formal than simple **〜から** or **〜ので**, so it shows you really know your stuff!
+
+**Watch out for these common mistakes:**
+- Don't forget the **です** at the end in formal situations
+- Make sure you're using the past tense (**〜た**) in the first part
+- Remember, this is for explaining past events, not future ones!
+
+**Pro tip:** This pattern is like the "grown-up" version of giving reasons. It's what you'd use when you want to sound really sophisticated and well-educated."
+
+Make explanations detailed, specific, and actionable. Avoid vague statements like "This pattern is used to express..." without explaining exactly how, when, and why to use it.`;
+}
+
 export async function generateLesson(level: 'N4' | 'N3', topic?: string): Promise<GeneratedLesson> {
   const prompt = `Generate a comprehensive Japanese lesson for JLPT ${level} level${topic ? ` about ${topic}` : ''}.
 
@@ -53,25 +108,7 @@ For the story/article:
 - Make it interesting and relatable for language learners
 - Include natural dialogue and descriptive language
 
-For grammar points:
-- Focus on grammar patterns that actually appear in the text
-- Provide comprehensive, detailed explanations that include:
-  * The exact meaning and usage of the grammar pattern
-  * When and how to use it (context, situations, formality level)
-  * Grammatical structure breakdown (required vs optional parts)
-  * Common variations or related forms
-  * How it differs from similar patterns
-  * Typical learner mistakes and how to avoid them (be encouraging!)
-  * Politeness levels and register considerations
-  * Any special notes about conjugation or particle usage
-- Give 3-4 examples with English translations: one from the text, plus additional examples showing different contexts
-- Format examples as "Japanese sentence - English translation"
-- Write in a clear, direct tone that gets straight to the point - no introductory phrases like "Hello" or "Let's dive into"
-- Use markdown formatting for better readability (bold, italics, bullet points)
-- Make explanations specific and actionable, not vague generalizations
-- Include information about politeness levels, formality, and register when relevant
-- Make it feel like a helpful tutor explaining things clearly and directly
-- IMPORTANT: Ensure all JSON is properly escaped. Use \\n for line breaks and escape any quotes within the explanation text
+${getGrammarGenerationPrompt(level)}
 
 For vocabulary:
 - Extract important words from the text
@@ -343,43 +380,7 @@ ${lessonContent.story}
 
 JLPT LEVEL: ${lessonContent.level}
 
-For each grammar point, provide:
-
-1. GRAMMAR PATTERN NAME: The specific pattern (e.g., "〜た理由は〜だからです")
-
-2. COMPREHENSIVE EXPLANATION (200-300 words, direct and engaging):
-   - Start directly with the explanation - no introductory phrases like "Hello" or "Let's dive into"
-   - Write in a clear, engaging tone that gets straight to the point
-   - Use engaging language, analogies, and real-world examples
-   - Include the exact meaning and primary usage
-   - Explain when to use it (context, situations, formality level)
-   - Break down the grammatical structure (required vs optional parts)
-   - Show common variations or related forms
-   - Explain how it differs from similar patterns
-   - Share typical learner mistakes and how to avoid them (be encouraging!)
-   - Cover politeness levels and register considerations
-   - Add any special notes about conjugation or particle usage
-   - Use markdown formatting for better readability (bold, italics, bullet points)
-   - Make it feel like a helpful tutor explaining things clearly and directly
-- IMPORTANT: Ensure all JSON is properly escaped. Use \\n for line breaks and escape any quotes within the explanation text
-
-3. EXAMPLES (3-4 sentences with English translations):
-   - One example from the text above with English translation
-   - 2-3 additional examples showing different contexts and variations
-   - Include both positive and negative forms if applicable
-   - Show different politeness levels if relevant
-   - Format: "Japanese sentence - English translation"
-
-EXAMPLE FORMAT:
-{
-  "point": "〜た理由は〜だからです",
-  "explanation": "**〜た理由は〜だからです** is your go-to way to explain *why* something happened in the past. It\\'s like saying \\\"The reason X happened is because Y\\\" - but in a really polite, formal way that Japanese people love!\\n\\nHere\\'s how it works: you\\'ve got two main parts. The first part (with **〜た**) tells us *what* happened, and the second part (with **〜だからです**) tells us *why* it happened. It\\'s like building a little story with a clear cause-and-effect relationship.\\n\\n**When should you use this?** Perfect for formal situations like job interviews, academic writing, or when you want to sound really polished and professional. It\\'s more formal than simple **〜から** or **〜ので**, so it shows you really know your stuff!\\n\\n**Watch out for these common mistakes:**\\n- Don\\'t forget the **です** at the end in formal situations\\n- Make sure you\\'re using the past tense (**〜た**) in the first part\\n- Remember, this is for explaining past events, not future ones!\\n\\n**Pro tip:** This pattern is like the \\\"grown-up\\\" version of giving reasons. It\\'s what you\\'d use when you want to sound really sophisticated and well-educated.",
-  "examples": [
-    "彼が遅刻した理由は電車が遅れたからです。 - The reason he was late is because the train was delayed.",
-    "試験に落ちた理由は勉強しなかったからです。 - The reason I failed the exam is because I didn't study.",
-    "会社を辞めた理由は給料が安かったからです。 - The reason I quit the company is because the salary was low."
-  ]
-}
+${getGrammarGenerationPrompt(lessonContent.level)}
 
 Return the response as a JSON array with this exact structure:
 [
@@ -396,9 +397,7 @@ Focus on grammar patterns that are:
 - Important for understanding the text
 - Commonly tested on JLPT exams
 
-Make explanations detailed, specific, and actionable. Avoid vague statements like "This pattern is used to express..." without explaining exactly how, when, and why to use it.
-
-CRITICAL: Return ONLY valid JSON. All quotes within the explanation text must be escaped with backslashes. Use \\n for line breaks. Do not include any additional text, explanations, or markdown formatting outside the JSON structure.`;
+CRITICAL: Return ONLY valid JSON. All quotes within the explanation text must be escaped with backslashes. Use \\\\n for line breaks. Do not include any additional text, explanations, or markdown formatting outside the JSON structure.`;
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',
